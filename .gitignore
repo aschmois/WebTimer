@@ -1,0 +1,15 @@
+/build/*
+.gradle/*
+.idea/workspace.xml
+.idea/libraries
+.DS_Store
+logs/*
+.idea/gradle.xml
+.idea/uiDesigner.xml
+*Thumbs.db*
+working_dir/config.properties
+.idea/vcs.xml
+.idea/misc.xml
+.idea/copyright/profiles_settings.xml
+.idea/compiler.xml
+working_dir/timer.db
