@@ -2,6 +2,7 @@ package com.android305.lights.util.schedule;
 
 import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.SQLConnection;
+
 import org.quartz.InterruptableJob;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -72,11 +73,15 @@ public class LampTask implements InterruptableJob {
         try {
             String param;
             if (startLamp) {
-                if (invert) param = "0";
-                else param = "1";
+                if (invert)
+                    param = "0";
+                else
+                    param = "1";
             } else {
-                if (invert) param = "1";
-                else param = "0";
+                if (invert)
+                    param = "1";
+                else
+                    param = "0";
             }
             Log.d("Trying to " + (startLamp ? "turn on" : "turn off") + " the lamp at " + ip);
             HttpURLConnection conn = (HttpURLConnection) new URL("http://" + ip + "/gpio/" + param).openConnection();
@@ -88,7 +93,7 @@ public class LampTask implements InterruptableJob {
                 Log.e("Lamp is throwing an HTTP error: " + response);
                 error = "HTTP Error: " + response;
                 conn.disconnect();
-                return false;
+                return connect(ip, startLamp, invert, tries - 1);
             } else {
                 Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + ip);
                 conn.disconnect();
@@ -96,7 +101,8 @@ public class LampTask implements InterruptableJob {
             }
         } catch (java.net.SocketTimeoutException e) {
             Log.w("Lamp timeout retrying... (" + tries + " tries left)", e);
-            if (tries > 0) return connect(ip, startLamp, invert, tries - 1);
+            if (tries > 0)
+                return connect(ip, startLamp, invert, tries - 1);
             error = e.getLocalizedMessage();
         } catch (IOException e) {
             Log.e("Can't reach lamp", e);

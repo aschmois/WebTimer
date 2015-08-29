@@ -1,6 +1,7 @@
 package com.android305.lights.util.sqlite.table;
 
 import com.android305.lights.util.sqlite.SQLConnection;
+
 import org.json.JSONObject;
 
 import java.sql.PreparedStatement;
@@ -121,7 +122,8 @@ public class Lamp {
         public static Lamp commit(Lamp lamp) throws SQLException, SQLConnection.SQLUniqueException {
             apply(lamp);
             Lamp l = get(lamp.name);
-            if (l == null) throw new SQLException("Lamp with the name of `" + lamp.name + "` was to be inserted but was never inserted.");
+            if (l == null)
+                throw new SQLException("Lamp with the name of `" + lamp.name + "` was to be inserted but was never inserted.");
             return l;
         }
 
@@ -173,13 +175,20 @@ public class Lamp {
 
     public static Lamp getLamp(JSONObject parsed) {
         Lamp lamp = new Lamp();
-        if (parsed.has("id")) lamp.setId(parsed.getInt("id"));
-        if (parsed.has("name")) lamp.setName(parsed.getString("name"));
-        if (parsed.has("ip")) lamp.setIpAddress(parsed.getString("ip"));
-        if (parsed.has("status")) lamp.setStatus(parsed.getBoolean("status"));
-        if (parsed.has("invert")) lamp.setInvert(parsed.getBoolean("invert"));
-        if (parsed.has("error")) lamp.setError(parsed.getString("error"));
-        if (parsed.has("group")) lamp.setInternalGroupId(parsed.getInt("group"));
+        if (parsed.has("id"))
+            lamp.setId(parsed.getInt("id"));
+        if (parsed.has("name"))
+            lamp.setName(parsed.getString("name"));
+        if (parsed.has("ip"))
+            lamp.setIpAddress(parsed.getString("ip"));
+        if (parsed.has("status"))
+            lamp.setStatus(parsed.getBoolean("status"));
+        if (parsed.has("invert"))
+            lamp.setInvert(parsed.getBoolean("invert"));
+        if (parsed.has("error"))
+            lamp.setError(parsed.getString("error"));
+        if (parsed.has("group"))
+            lamp.setInternalGroupId(parsed.getInt("group"));
         return lamp;
     }
 

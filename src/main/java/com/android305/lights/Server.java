@@ -4,6 +4,7 @@ import com.android305.lights.util.EncryptionUtils;
 import com.android305.lights.util.Log;
 import com.android305.lights.util.encryption.Encryption;
 import com.android305.lights.util.schedule.Timer;
+
 import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
@@ -11,9 +12,14 @@ import org.apache.mina.filter.codec.textline.TextLineCodecFactory;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import org.jasypt.util.text.BasicTextEncryptor;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.net.BindException;
 import java.net.InetAddress;
@@ -26,6 +32,9 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Scanner;
+
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
 public class Server {
 
@@ -185,7 +194,8 @@ public class Server {
                     try {
                         if (server != null && !server.isStopped()) {
                             Log.w("You must stop the server if you would like to start it again.");
-                        } else server = new Server(port, password);
+                        } else
+                            server = new Server(port, password);
                     } catch (BindException e) {
                         Log.w("Address in use. Please try again. If issue persists, please reboot your computer.");
                         Log.e(e);

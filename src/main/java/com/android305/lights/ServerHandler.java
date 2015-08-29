@@ -5,6 +5,7 @@ import com.android305.lights.util.SessionResponse;
 import com.android305.lights.util.sqlite.GroupUtils;
 import com.android305.lights.util.sqlite.LampUtils;
 import com.android305.lights.util.sqlite.SQLConnection;
+
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
@@ -202,7 +203,8 @@ public class ServerHandler extends IoHandlerAdapter {
             json.put("code", response.getCode());
             json.put("message", response.getMessage());
             json.put("original", original);
-            if (response.getData() != null) json.put("data", response.getData());
+            if (response.getData() != null)
+                json.put("data", response.getData());
             if (Log.VERBOSE) {
                 Log.v(json.toString());
             }

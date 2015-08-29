@@ -91,11 +91,11 @@ public class SQLConnection {
             stmt.executeUpdate(sql);
 
             stmt = instance.createStatement();
-            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Porch Lamp', '192.168.1.20', 1, 1, 1);";
+            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Porch', '192.168.1.20', 1, 1, 1);";
             stmt.executeUpdate(sql);
 
             stmt = instance.createStatement();
-            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Front Lamps', '192.168.1.21', 1, 1, 1);";
+            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Front', '192.168.1.21', 1, 1, 1);";
             stmt.executeUpdate(sql);
 
             stmt = instance.createStatement();
