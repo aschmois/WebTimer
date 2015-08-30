@@ -1,7 +1,6 @@
 package com.android305.lights.util.schedule;
 
 import com.android305.lights.util.Log;
-import com.android305.lights.util.sqlite.SQLConnection;
 import com.android305.lights.util.sqlite.table.Timer;
 
 import org.quartz.Job;
@@ -43,30 +42,37 @@ public class DailyTask implements Job {
                 }
             }
             scheduledTasks.clear();
-            SQLConnection c = SQLConnection.getInstance();
             Calendar calendar = Calendar.getInstance();
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+            Timer[] dayBefore;
             Timer[] day;
             switch (dayOfWeek) {
                 case Calendar.SUNDAY:
+                    dayBefore = Timer.DBHelper.getSaturday();
                     day = Timer.DBHelper.getSunday();
                     break;
                 case Calendar.MONDAY:
+                    dayBefore = Timer.DBHelper.getSunday();
                     day = Timer.DBHelper.getMonday();
                     break;
                 case Calendar.TUESDAY:
+                    dayBefore = Timer.DBHelper.getMonday();
                     day = Timer.DBHelper.getTuesday();
                     break;
                 case Calendar.WEDNESDAY:
+                    dayBefore = Timer.DBHelper.getTuesday();
                     day = Timer.DBHelper.getWednesday();
                     break;
                 case Calendar.THURSDAY:
+                    dayBefore = Timer.DBHelper.getWednesday();
                     day = Timer.DBHelper.getThursday();
                     break;
                 case Calendar.FRIDAY:
+                    dayBefore = Timer.DBHelper.getThursday();
                     day = Timer.DBHelper.getFriday();
                     break;
                 case Calendar.SATURDAY:
+                    dayBefore = Timer.DBHelper.getFriday();
                     day = Timer.DBHelper.getSaturday();
                     break;
                 default:
@@ -108,6 +114,34 @@ public class DailyTask implements Job {
                             Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
                             //TODO: Misfired tasks (usually tasks that run at midnight)
                             //TODO: Turn off lamp if server was restarted and lamp should be off
+                        }
+                    }
+                    //TODO: RGB Lamps
+                } catch (SchedulerException e) {
+                    Log.e(e);
+                }
+            }
+            for (Timer t : dayBefore) {
+                try {
+                    Date start = getDate(t.getStart());
+                    Date end = getDate(t.getEnd());
+                    if (start.getTime() - end.getTime() > 0) {
+                        if (t.getRGB() == null) {
+                            {
+                                JobBuilder jobBuilder = newJob(LampTask.class);
+                                jobBuilder.usingJobData(LampTask.GROUP_ID, t.getInternalGroupId());
+                                jobBuilder.usingJobData(LampTask.START_LAMP, false);
+                                jobBuilder.usingJobData(LampTask.TIMER_ID, t.getId());
+                                JobDetail job = jobBuilder.build();
+                                TriggerBuilder builder = newTrigger();
+                                builder.startAt(end);
+                                builder.withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount());
+                                sched.scheduleJob(job, builder.build());
+                                scheduledTasks.add(job.getKey());
+                                Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
+                                //TODO: Misfired tasks (usually tasks that run at midnight)
+                                //TODO: Turn off lamp if server was restarted and lamp should be off
+                            }
                         }
                     }
                     //TODO: RGB Lamps
