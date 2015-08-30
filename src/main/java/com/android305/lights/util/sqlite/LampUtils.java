@@ -33,13 +33,12 @@ public class LampUtils {
             lamp.setStatus(invert ? 1 : 0);
             lamp.setInvert(invert);
             lamp.setInternalGroupId(groupId);
-            Lamp.DBHelper.apply(lamp);
+            lamp = Lamp.DBHelper.commit(lamp);
 
-            Group group = Group.DBHelper.getWithLampsAndTimers(groupId);
-            if (group != null) {
-                return new SessionResponse(ServerHandler.LAMP_ADD_SUCCESS, false, "Lamp " + name + " added.", group.getParsed());
+            if (lamp != null) {
+                return new SessionResponse(ServerHandler.LAMP_ADD_SUCCESS, false, "Lamp " + name + " added.", lamp.getParsed());
             } else {
-                return new SessionResponse(ServerHandler.LAMP_SQL_ERROR, true, "Unknown SQL error. Group is missing.");
+                return new SessionResponse(ServerHandler.LAMP_SQL_ERROR, true, "Unknown SQL error. Lamp is missing.");
             }
         } catch (SQLConnection.SQLUniqueException e) {
             return new SessionResponse(ServerHandler.LAMP_ALREADY_EXISTS, true, "Lamp " + name + " already exists.");

@@ -3,6 +3,7 @@ package com.android305.lights.util.sqlite;
 import com.android305.lights.ServerHandler;
 import com.android305.lights.util.SessionResponse;
 import com.android305.lights.util.sqlite.table.Group;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
