@@ -3,27 +3,19 @@ package com.android305.lights.util.sqlite;
 import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.table.Group;
 import com.android305.lights.util.sqlite.table.Lamp;
+import com.android305.lights.util.sqlite.table.Timer;
 import com.sun.istack.internal.NotNull;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Time;
 
 public class SQLConnection {
     //Hey you, read http://stackoverflow.com/questions/3424156/upgrade-sqlite-database-from-one-version-to-another for some upgrading guidelines
     private final static int DB_VERSION = 1;
-
-    final static String TABLE_TIMER = "CREATE TABLE IF NOT EXISTS `timer` " +
-            "(`ID` INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            " `START`          TEXT      NOT NULL," +
-            " `END`            TEXT      NOT NULL," +
-            " `SUNDAY`         INTEGER   NOT NULL," +
-            " `MONDAY`         INTEGER   NOT NULL," +
-            " `TUESDAY`        INTEGER   NOT NULL," +
-            " `WEDNESDAY`      INTEGER   NOT NULL," +
-            " `THURSDAY`       INTEGER   NOT NULL," +
-            " `FRIDAY`         INTEGER   NOT NULL," +
-            " `SATURDAY`       INTEGER   NOT NULL," +
-            " `RGB`            TEXT              ," +
-            " `GROUP`          INTEGER   NOT NULL);";
 
     public static class SQLUniqueException extends Exception {
         public SQLUniqueException(String table, String column, String value) {
@@ -39,7 +31,7 @@ public class SQLConnection {
 
     private Connection c;
 
-    public SQLConnection() {
+    private SQLConnection() {
         Statement stmt;
         try {
             Log.d("Initializing SQLite database...");
@@ -55,7 +47,7 @@ public class SQLConnection {
             stmt.close();
 
             stmt = c.createStatement();
-            stmt.executeUpdate(TABLE_TIMER);
+            stmt.executeUpdate(Timer.QUERY);
             stmt.close();
 
             Log.d("SQLite database connected.");
@@ -69,7 +61,7 @@ public class SQLConnection {
     @NotNull
     private Connection checkConnection() throws SQLException {
         try {
-            if (c == null || !c.isValid(3)) {
+            if (c == null || c.isClosed() || !c.isValid(3)) {
                 Class.forName("org.sqlite.JDBC");
                 c = DriverManager.getConnection("jdbc:sqlite:timer.db");
             }
@@ -82,38 +74,56 @@ public class SQLConnection {
 
     public static void insertTestData() {
         try {
-            Statement stmt = instance.createStatement();
-            String sql = "INSERT INTO `group` (NAME) VALUES ('Front Lamps');";
-            stmt.executeUpdate(sql);
+            Group frontLamps = new Group();
+            frontLamps.setName("Front Lamps");
+            frontLamps = Group.DBHelper.commit(frontLamps);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO `group` (NAME) VALUES ('Test Lamp');";
-            stmt.executeUpdate(sql);
+            Group testLamps = new Group();
+            testLamps.setName("Test Lamps");
+            testLamps = Group.DBHelper.commit(testLamps);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Porch', '192.168.1.20', 1, 1, 1);";
-            stmt.executeUpdate(sql);
+            Lamp lamp = new Lamp();
+            lamp.setName("Porch");
+            lamp.setIpAddress("192.168.1.20");
+            lamp.setInvert(true);
+            lamp.setStatus(1);
+            lamp.setInternalGroupId(frontLamps.getId());
+            Lamp.DBHelper.apply(lamp);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Front', '192.168.1.21', 1, 1, 1);";
-            stmt.executeUpdate(sql);
+            lamp = new Lamp();
+            lamp.setName("Front");
+            lamp.setIpAddress("192.168.1.21");
+            lamp.setInvert(true);
+            lamp.setStatus(1);
+            lamp.setInternalGroupId(frontLamps.getId());
+            Lamp.DBHelper.apply(lamp);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO lamp (NAME,IP_ADDRESS,STATUS,INVERT,`GROUP`) VALUES ('Test Lamp', '192.168.1.22', 1, 1, 2);";
-            stmt.executeUpdate(sql);
+            lamp = new Lamp();
+            lamp.setName("Test Lamp");
+            lamp.setIpAddress("192.168.1.22");
+            lamp.setInvert(true);
+            lamp.setStatus(1);
+            lamp.setInternalGroupId(testLamps.getId());
+            Lamp.DBHelper.apply(lamp);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO timer (START,END,SUNDAY,MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,`GROUP`) VALUES ('04:30:00', '06:30:00', 1, 1,1,1,1,1,1,1);";
-            stmt.executeUpdate(sql);
+            Timer timer = new Timer();
+            timer.setStart(Time.valueOf("04:30:00"));
+            timer.setEnd(Time.valueOf("06:30:00"));
+            timer.setInternalGroupId(frontLamps.getId());
+            Timer.DBHelper.apply(timer);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO timer (START,END,SUNDAY,MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,`GROUP`) VALUES ('04:30:00', '06:30:00', 1, 1,1,1,1,1,1,2);";
-            stmt.executeUpdate(sql);
+            timer = new Timer();
+            timer.setStart(Time.valueOf("20:00:00"));
+            timer.setEnd(Time.valueOf("02:00:00"));
+            timer.setInternalGroupId(frontLamps.getId());
+            Timer.DBHelper.apply(timer);
 
-            stmt = instance.createStatement();
-            sql = "INSERT INTO timer (START,END,SUNDAY,MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,`GROUP`) VALUES ('20:30:00', '20:31:00', 1, 1,1,1,1,1,1,2);";
-            stmt.executeUpdate(sql);
-        } catch (SQLException e) {
+            timer = new Timer();
+            timer.setStart(Time.valueOf("04:30:00"));
+            timer.setEnd(Time.valueOf("06:30:00"));
+            timer.setInternalGroupId(testLamps.getId());
+            Timer.DBHelper.apply(timer);
+        } catch (SQLException | SQLUniqueException e) {
             Log.e(e);
         }
     }
@@ -127,6 +137,7 @@ public class SQLConnection {
     }
 
     public void close() throws SQLException {
-        if (c != null && c.isValid(3)) c.close();
+        if (c != null && c.isValid(3))
+            c.close();
     }
 }

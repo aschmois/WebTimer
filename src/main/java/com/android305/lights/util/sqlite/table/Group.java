@@ -2,6 +2,7 @@ package com.android305.lights.util.sqlite.table;
 
 import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.SQLConnection;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -21,6 +22,7 @@ public class Group {
     private String name;
 
     private Lamp[] lamps;
+    private Timer[] timers;
 
     public Group() {
     }
@@ -46,7 +48,8 @@ public class Group {
     }
 
     public Lamp[] getLamps() {
-        if (lamps == null) attachLamps();
+        if (lamps == null)
+            attachLamps();
         return lamps;
     }
 
@@ -55,7 +58,22 @@ public class Group {
             lamps = DBHelper.getLamps(this);
         } catch (SQLException e) {
             Log.e(e);
-            Log.w("Call DBHelper.getWithLamps(int) instead of DBHelper.get(int) to catch this error");
+            Log.w("Call DBHelper.getWithLampsAndTimers(int) instead of DBHelper.get(int) to catch this error");
+        }
+    }
+
+    public Timer[] getTimers() {
+        if (timers == null)
+            attachTimers();
+        return timers;
+    }
+
+    private void attachTimers() {
+        try {
+            timers = DBHelper.getTimers(this);
+        } catch (SQLException e) {
+            Log.e(e);
+            Log.w("Call DBHelper.getWithLampsAndTimers(int) instead of DBHelper.get(int) to catch this error");
         }
     }
 
@@ -63,15 +81,16 @@ public class Group {
         private static SQLConnection c = SQLConnection.getInstance();
 
         public static Group[] getAll() throws SQLException {
-            Statement selectGroupStmt = c.createStatement();
-            ResultSet rs = selectGroupStmt.executeQuery("SELECT * FROM `group`;");
+            Statement selectStmt = c.createStatement();
+            ResultSet rs = selectStmt.executeQuery("SELECT * FROM `group`;");
             ArrayList<Group> groups = new ArrayList<>();
             while (rs.next()) {
                 Group group = resultSetToGroup(rs);
                 group.lamps = getLamps(group);
+                group.timers = getTimers(group);
                 groups.add(group);
             }
-            selectGroupStmt.close();
+            selectStmt.close();
             if (groups.size() > 0) {
                 return groups.toArray(new Group[groups.size()]);
             }
@@ -79,34 +98,35 @@ public class Group {
         }
 
         public static Group get(int id) throws SQLException {
-            PreparedStatement selectGroupStmt = c.prepareStatement("SELECT * FROM `group` WHERE `ID` = ?;");
-            selectGroupStmt.setInt(1, id);
-            ResultSet rs = selectGroupStmt.executeQuery();
+            PreparedStatement selectStmt = c.prepareStatement("SELECT * FROM `group` WHERE `ID` = ?;");
+            selectStmt.setInt(1, id);
+            ResultSet rs = selectStmt.executeQuery();
             if (rs.next()) {
                 Group group = resultSetToGroup(rs);
-                selectGroupStmt.close();
+                selectStmt.close();
                 return group;
             }
             return null;
         }
 
-        public static Group getWithLamps(int id) throws SQLException {
-            PreparedStatement selectGroupStmt = c.prepareStatement("SELECT * FROM `group` WHERE `ID` = ?;");
-            selectGroupStmt.setInt(1, id);
-            ResultSet rs = selectGroupStmt.executeQuery();
+        public static Group getWithLampsAndTimers(int id) throws SQLException {
+            PreparedStatement selectStmt = c.prepareStatement("SELECT * FROM `group` WHERE `ID` = ?;");
+            selectStmt.setInt(1, id);
+            ResultSet rs = selectStmt.executeQuery();
             if (rs.next()) {
                 Group group = resultSetToGroup(rs);
-                selectGroupStmt.close();
+                selectStmt.close();
                 group.lamps = getLamps(group);
+                group.timers = getTimers(group);
                 return group;
             }
             return null;
         }
 
         private static Lamp[] getLamps(Group group) throws SQLException {
-            PreparedStatement selectLampsStmt = c.prepareStatement("SELECT * FROM `lamp` WHERE `GROUP` = ?;");
-            selectLampsStmt.setInt(1, group.id);
-            ResultSet rs = selectLampsStmt.executeQuery();
+            PreparedStatement selectStmt = c.prepareStatement("SELECT * FROM `lamp` WHERE `GROUP` = ?;");
+            selectStmt.setInt(1, group.id);
+            ResultSet rs = selectStmt.executeQuery();
             ArrayList<Lamp> lamps = new ArrayList<>();
             while (rs.next()) {
                 lamps.add(Lamp.DBHelper.resultSetToLamp(rs));
@@ -114,13 +134,24 @@ public class Group {
             return lamps.toArray(new Lamp[lamps.size()]);
         }
 
+        private static Timer[] getTimers(Group group) throws SQLException {
+            PreparedStatement selectStmt = c.prepareStatement("SELECT * FROM `timer` WHERE `GROUP` = ?;");
+            selectStmt.setInt(1, group.id);
+            ResultSet rs = selectStmt.executeQuery();
+            ArrayList<Timer> timers = new ArrayList<>();
+            while (rs.next()) {
+                timers.add(Timer.DBHelper.resultSetToTimer(rs));
+            }
+            return timers.toArray(new Timer[timers.size()]);
+        }
+
         public static Group get(String name) throws SQLException {
-            PreparedStatement selectLampsStmt = c.prepareStatement("SELECT * FROM `group` WHERE `NAME` = ?;");
-            selectLampsStmt.setString(1, name);
-            ResultSet rs = selectLampsStmt.executeQuery();
+            PreparedStatement selectStmt = c.prepareStatement("SELECT * FROM `group` WHERE `NAME` = ?;");
+            selectStmt.setString(1, name);
+            ResultSet rs = selectStmt.executeQuery();
             if (rs.next()) {
                 Group group = resultSetToGroup(rs);
-                selectLampsStmt.close();
+                selectStmt.close();
                 return group;
             }
             return null;
@@ -129,25 +160,34 @@ public class Group {
         public static Group commit(Group group) throws SQLException, SQLConnection.SQLUniqueException {
             apply(group);
             Group g = get(group.name);
-            if (g == null) throw new SQLException("Group with the name of `" + group.name + "` was to be inserted but was never inserted.");
+            if (g == null)
+                throw new SQLException("Group with the name of `" + group.name + "` was to be inserted but was never inserted.");
             return g;
         }
 
         public static void apply(Group group) throws SQLException, SQLConnection.SQLUniqueException {
-            PreparedStatement selectLampStmt = c.prepareStatement("SELECT `ID` FROM `group` WHERE `NAME` = ?;");
-            selectLampStmt.setString(1, group.name);
-            ResultSet rs = selectLampStmt.executeQuery();
+            PreparedStatement selectStmt = c.prepareStatement("SELECT `ID` FROM `group` WHERE `NAME` = ?;");
+            selectStmt.setString(1, group.name);
+            ResultSet rs = selectStmt.executeQuery();
             if (!rs.next()) {
-                selectLampStmt.close();
+                selectStmt.close();
                 String sql = "INSERT INTO `group` (`NAME`) VALUES (?);";
-                PreparedStatement insertLampStmt = c.prepareStatement(sql);
-                insertLampStmt.setString(1, group.name);
-                insertLampStmt.executeUpdate();
-                insertLampStmt.close();
+                PreparedStatement insertStmt = c.prepareStatement(sql);
+                insertStmt.setString(1, group.name);
+                insertStmt.executeUpdate();
+                insertStmt.close();
             } else {
-                selectLampStmt.close();
+                selectStmt.close();
                 throw new SQLConnection.SQLUniqueException("group", "NAME", group.name);
             }
+        }
+
+        public static void update(Group group) throws SQLException {
+            PreparedStatement updateStmt = c.prepareStatement("UPDATE `group` SET `NAME` = ? WHERE `ID` = ?;");
+            updateStmt.setString(1, group.name);
+            updateStmt.setInt(2, group.id);
+            updateStmt.executeUpdate();
+            updateStmt.close();
         }
 
         public static Group resultSetToGroup(ResultSet rs) throws SQLException {
@@ -169,6 +209,13 @@ public class Group {
             }
             group.put("lamps", parsedLamps);
         }
+        if (timers != null) {
+            JSONArray parsedTimers = new JSONArray();
+            for (Timer timer : timers) {
+                parsedTimers.put(timer.getParsed());
+            }
+            group.put("timers", parsedTimers);
+        }
         return group;
     }
 
@@ -178,6 +225,7 @@ public class Group {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", lamps=" + Arrays.toString(lamps) +
+                ", timers=" + Arrays.toString(timers) +
                 '}';
     }
 }

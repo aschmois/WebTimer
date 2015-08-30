@@ -3,7 +3,7 @@ package com.android305.lights;
 import com.android305.lights.util.EncryptionUtils;
 import com.android305.lights.util.Log;
 import com.android305.lights.util.encryption.Encryption;
-import com.android305.lights.util.schedule.Timer;
+import com.android305.lights.util.schedule.TimerScheduler;
 
 import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.mina.core.session.IdleStatus;
@@ -238,7 +238,7 @@ public class Server {
     }
 
     private NioSocketAcceptor acceptor;
-    private Timer timer;
+    private TimerScheduler timer;
 
     public Server(int port, String password) throws IOException {
         Log.i("Starting server...");
@@ -253,7 +253,7 @@ public class Server {
         acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 1);
         acceptor.bind(new InetSocketAddress(port));
         Log.i("Server started.");
-        timer = new Timer();
+        timer = new TimerScheduler();
     }
 
     private void closeConn() {

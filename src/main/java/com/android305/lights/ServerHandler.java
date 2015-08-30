@@ -31,6 +31,7 @@ public class ServerHandler extends IoHandlerAdapter {
     /* Group */
     public final static int GROUP_ERROR_USAGE = 2000;
     public final static int GROUP_SQL_ERROR = 2001;
+    public final static int GROUP_REFRESH = 2002;
 
     public final static int GROUP_ADD_SUCCESS = 2100;
     public final static int GROUP_ALREADY_EXISTS = 2101;
@@ -50,13 +51,16 @@ public class ServerHandler extends IoHandlerAdapter {
     public final static int LAMP_GET_SUCCESS = 3200;
     public final static int LAMP_GET_DOES_NOT_EXIST = 3201;
 
+    public final static int LAMP_TOGGLE_SUCCESS = 3300;
+    public final static int LAMP_TOGGLE_DOES_NOT_EXIST = 3301;
+
     private final String password;
     private HashMap<Long, Boolean> authenticated = new HashMap<>();
     private SQLConnection c;
 
     public ServerHandler(String password) {
         this.password = password;
-        this.c = new SQLConnection();
+        this.c = SQLConnection.getInstance();
     }
 
     @Override
@@ -129,8 +133,11 @@ public class ServerHandler extends IoHandlerAdapter {
                 case "delete":
                     //TODO: Delete lamp
                     break;
+                case "toggle":
+                    writeJSON(session, original, actionId, LampUtils.toggleLamp(args));
+                    break;
                 default:
-                    writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,update,delete"));
+                    writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,update,delete,toggle"));
                     break;
             }
         } catch (SQLException e) {
