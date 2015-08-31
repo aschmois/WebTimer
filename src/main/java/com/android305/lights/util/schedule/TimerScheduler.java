@@ -1,8 +1,6 @@
 package com.android305.lights.util.schedule;
 
-import com.android305.lights.util.ConnectionResponse;
 import com.android305.lights.util.Log;
-import com.android305.lights.util.sqlite.table.Lamp;
 
 import org.quartz.JobDetail;
 import org.quartz.SchedulerException;
@@ -10,7 +8,6 @@ import org.quartz.Trigger;
 import org.quartz.impl.StdSchedulerFactory;
 
 import java.sql.Date;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -32,7 +29,7 @@ public class TimerScheduler {
             LocalDateTime tomorrowMidnight = LocalDateTime.of(today, midnight).plusDays(1);
             sched = new StdSchedulerFactory().getScheduler();
             sched.start();
-            JobDetail job = newJob(DailyTask.class).withIdentity("dailyTask").build();
+            JobDetail job = newJob(DailyTask.class).withIdentity("dailyTask").usingJobData(DailyTask.FIRST_TIME, false).build();
             Trigger trigger = newTrigger().withIdentity("dailyTaskTrigger")
                                           .startAt(Date.from(tomorrowMidnight.atZone(z).toInstant()))
                                           .withSchedule(simpleSchedule().withIntervalInHours(24).repeatForever())
@@ -47,30 +44,7 @@ public class TimerScheduler {
     }
 
     public void refreshTimerNow() throws SchedulerException {
-        sched.scheduleJob(newJob(DailyTask.class).build(), newTrigger().startNow().build());
-        try {
-            Thread.sleep(1000);
-            // Delay for a little while lamp tasks are scheduled, this delay is not really necessary and not accurate,
-            // it's only here to give the cpu a bit of a break
-        } catch (InterruptedException e) {
-        }
-        try {
-            Lamp[] lamps = Lamp.DBHelper.getAll();
-            if (lamps != null) {
-                for (Lamp l : lamps) {
-                    ConnectionResponse response = l.retrieveStatus(2);
-                    l.setStatus(response.getStatus());
-                    l.setError(response.getError());
-                    try {
-                        Lamp.DBHelper.update(l);
-                    } catch (SQLException e) {
-                        Log.e(e);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            Log.e(e);
-        }
+        sched.scheduleJob(newJob(DailyTask.class).usingJobData(DailyTask.FIRST_TIME, true).build(), newTrigger().startNow().build());
     }
 
     public void stop() {

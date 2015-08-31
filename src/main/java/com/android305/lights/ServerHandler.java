@@ -5,6 +5,7 @@ import com.android305.lights.util.SessionResponse;
 import com.android305.lights.util.sqlite.GroupUtils;
 import com.android305.lights.util.sqlite.LampUtils;
 import com.android305.lights.util.sqlite.SQLConnection;
+import com.android305.lights.util.sqlite.table.Group;
 
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IdleStatus;
@@ -19,9 +20,27 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
 
 public class ServerHandler extends IoHandlerAdapter {
+    private static HashMap<Long, IoSession> openedSessions = new HashMap<>();
+
+    @SuppressWarnings("unchecked")
+    public synchronized static void refreshGroup(Long exclude, Group group) {
+        JSONObject groupParsed = new JSONObject();
+        groupParsed.put("group", group.getParsed());
+        SessionResponse response = new SessionResponse(GROUP_REFRESH, false, "", groupParsed);
+        Iterator it = openedSessions.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Long, IoSession> pair = (Map.Entry) it.next();
+            if (exclude == null || pair.getKey().equals(exclude))
+                writeJSON(pair.getValue(), "", -1, response);
+            it.remove(); // avoids a ConcurrentModificationException
+        }
+    }
+
     public final static int ERROR_UNKNOWN = 1;
 
     public final static int AUTH_SUCCESS = 1000;
@@ -122,7 +141,7 @@ public class ServerHandler extends IoHandlerAdapter {
         try {
             switch (args.getString("secondary_action")) {
                 case "add":
-                    writeJSON(session, original, actionId, LampUtils.addLamp(args));
+                    writeJSON(session, original, actionId, LampUtils.addLamp(session.getId(), args));
                     break;
                 case "get":
                     writeJSON(session, original, actionId, LampUtils.getLamp(args));
@@ -134,7 +153,7 @@ public class ServerHandler extends IoHandlerAdapter {
                     //TODO: Delete lamp
                     break;
                 case "toggle":
-                    writeJSON(session, original, actionId, LampUtils.toggleLamp(args));
+                    writeJSON(session, original, actionId, LampUtils.toggleLamp(session.getId(), args));
                     break;
                 default:
                     writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,update,delete,toggle"));
@@ -174,7 +193,7 @@ public class ServerHandler extends IoHandlerAdapter {
         }
     }
 
-    private String enc(String msg) throws EncryptionOperationNotPossibleException {
+    private static String enc(String msg) throws EncryptionOperationNotPossibleException {
         return Server.enc.encrypt(msg);
     }
 
@@ -182,6 +201,7 @@ public class ServerHandler extends IoHandlerAdapter {
     public void sessionClosed(IoSession session) throws Exception {
         Log.v("Connection '" + session.getId() + "' closed.");
         c.close();
+        openedSessions.remove(session.getId());
     }
 
     @Override
@@ -194,6 +214,7 @@ public class ServerHandler extends IoHandlerAdapter {
 
     @Override
     public void sessionOpened(IoSession session) throws Exception {
+        openedSessions.put(session.getId(), session);
         Log.d("New connection: " + session.getId());
         DateFormat format = new SimpleDateFormat("EEE MMM d HH:mm:ss zzz yyyy", Locale.US);
         LocalDateTime now = LocalDateTime.now();
@@ -202,7 +223,7 @@ public class ServerHandler extends IoHandlerAdapter {
         session.getReadMessages();
     }
 
-    private void writeJSON(IoSession session, String original, int actionId, SessionResponse response) throws EncryptionOperationNotPossibleException {
+    private static void writeJSON(IoSession session, String original, int actionId, SessionResponse response) throws EncryptionOperationNotPossibleException {
         if (session != null) {
             JSONObject json = new JSONObject();
             json.put("action_id", actionId);

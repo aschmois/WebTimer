@@ -78,9 +78,9 @@ public class SQLConnection {
             frontLamps.setName("Front Lamps");
             frontLamps = Group.DBHelper.commit(frontLamps);
 
-            Group testLamps = new Group();
+            /*Group testLamps = new Group();
             testLamps.setName("Test Lamps");
-            testLamps = Group.DBHelper.commit(testLamps);
+            testLamps = Group.DBHelper.commit(testLamps);*/
 
             Lamp lamp = new Lamp();
             lamp.setName("Porch");
@@ -98,13 +98,13 @@ public class SQLConnection {
             lamp.setInternalGroupId(frontLamps.getId());
             Lamp.DBHelper.apply(lamp);
 
-            lamp = new Lamp();
+            /*lamp = new Lamp();
             lamp.setName("Test Lamp");
             lamp.setIpAddress("192.168.1.22");
             lamp.setInvert(true);
             lamp.setStatus(1);
             lamp.setInternalGroupId(testLamps.getId());
-            Lamp.DBHelper.apply(lamp);
+            Lamp.DBHelper.apply(lamp);*/
 
             Timer timer = new Timer();
             timer.setStart(Time.valueOf("04:30:00"));
@@ -118,11 +118,11 @@ public class SQLConnection {
             timer.setInternalGroupId(frontLamps.getId());
             Timer.DBHelper.apply(timer);
 
-            timer = new Timer();
+            /*timer = new Timer();
             timer.setStart(Time.valueOf("04:30:00"));
             timer.setEnd(Time.valueOf("06:30:00"));
             timer.setInternalGroupId(testLamps.getId());
-            Timer.DBHelper.apply(timer);
+            Timer.DBHelper.apply(timer);*/
         } catch (SQLException | SQLUniqueException e) {
             Log.e(e);
         }

@@ -4,25 +4,28 @@ import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.table.Timer;
 
 import org.quartz.Job;
-import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.JobKey;
 import org.quartz.SchedulerException;
-import org.quartz.TriggerBuilder;
+import org.quartz.Trigger;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import static org.quartz.TriggerBuilder.newTrigger;
 
 public class DailyTask implements Job {
+    public final static String FIRST_TIME = "first_time";
 
     public DailyTask() {
     }
@@ -31,6 +34,7 @@ public class DailyTask implements Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        boolean firstTime = (boolean) context.getJobDetail().getJobDataMap().get(FIRST_TIME);
         try {
             org.quartz.Scheduler sched = TimerScheduler.sched;
             for (JobKey k : scheduledTasks) {
@@ -42,6 +46,8 @@ public class DailyTask implements Job {
                 }
             }
             scheduledTasks.clear();
+            HashMap<Integer, Boolean> timerStatuses = new HashMap<>();
+            ArrayList<Integer> ids = new ArrayList<>();
             Calendar calendar = Calendar.getInstance();
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
             Timer[] dayBefore;
@@ -80,73 +86,80 @@ public class DailyTask implements Job {
                     System.exit(1);
                     return;
             }
-            for (Timer t : day) {
-                try {
-                    Date start = getDate(t.getStart());
-                    Date end = getDate(t.getEnd());
-                    if (t.getRGB() == null) {
-                        {
-                            JobBuilder jobBuilder = newJob(LampTask.class);
-                            jobBuilder.usingJobData(LampTask.GROUP_ID, t.getInternalGroupId());
-                            jobBuilder.usingJobData(LampTask.START_LAMP, true);
-                            jobBuilder.usingJobData(LampTask.TIMER_ID, t.getId());
-                            JobDetail job = jobBuilder.build();
-                            TriggerBuilder builder = newTrigger();
-                            builder.startAt(start);
-                            builder.withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount());
-                            sched.scheduleJob(job, builder.build());
-                            scheduledTasks.add(job.getKey());
-                            Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn on at: " + start.toString());
-                            //TODO: Misfired tasks (usually tasks that run at midnight)
-                            //TODO: Turn on lamp if server was restarted and lamp should be on
+            if (day != null) {
+                LocalDateTime n = LocalDateTime.now();
+                Date now = Date.from(n.atZone(ZoneId.systemDefault()).toInstant());
+                for (Timer t : day) {
+                    ids.add(t.getId());
+                    try {
+                        Date start = getDate(t.getStart());
+                        Date end = getDate(t.getEnd());
+                        boolean status;
+                        if (start.getTime() - end.getTime() > 0) {
+                            status = now.after(start);
+                        } else {
+                            status = now.after(start) && now.before(end);
                         }
-                        {
-                            JobBuilder jobBuilder = newJob(LampTask.class);
-                            jobBuilder.usingJobData(LampTask.GROUP_ID, t.getInternalGroupId());
-                            jobBuilder.usingJobData(LampTask.START_LAMP, false);
-                            jobBuilder.usingJobData(LampTask.TIMER_ID, t.getId());
-                            JobDetail job = jobBuilder.build();
-                            TriggerBuilder builder = newTrigger();
-                            builder.startAt(end);
-                            builder.withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount());
-                            sched.scheduleJob(job, builder.build());
-                            scheduledTasks.add(job.getKey());
-                            Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
-                            //TODO: Misfired tasks (usually tasks that run at midnight)
-                            //TODO: Turn off lamp if server was restarted and lamp should be off
+                        t.setStatus(status ? 1 : 0);
+                        Timer.DBHelper.update(t);
+                        if (firstTime && status) {
+                            JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
+                                                                  .usingJobData(LampTask.START_LAMP, true)
+                                                                  .usingJobData(LampTask.TIMER_ID, t.getId())
+                                                                  .build();
+                            sched.scheduleJob(job, newTrigger().startNow().build());
+                            timerStatuses.put(t.getId(), true);
+                            //TODO: improve this logic
                         }
-                    }
-                    //TODO: RGB Lamps
-                } catch (SchedulerException e) {
-                    Log.e(e);
-                }
-            }
-            for (Timer t : dayBefore) {
-                try {
-                    Date start = getDate(t.getStart());
-                    Date end = getDate(t.getEnd());
-                    if (start.getTime() - end.getTime() > 0) {
                         if (t.getRGB() == null) {
                             {
-                                JobBuilder jobBuilder = newJob(LampTask.class);
-                                jobBuilder.usingJobData(LampTask.GROUP_ID, t.getInternalGroupId());
-                                jobBuilder.usingJobData(LampTask.START_LAMP, false);
-                                jobBuilder.usingJobData(LampTask.TIMER_ID, t.getId());
-                                JobDetail job = jobBuilder.build();
-                                TriggerBuilder builder = newTrigger();
-                                builder.startAt(end);
-                                builder.withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount());
-                                sched.scheduleJob(job, builder.build());
+                                JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
+                                                                      .usingJobData(LampTask.START_LAMP, true)
+                                                                      .usingJobData(LampTask.TIMER_ID, t.getId())
+                                                                      .build();
+                                Trigger trigger = newTrigger().startAt(start).withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount()).build();
+                                sched.scheduleJob(job, trigger);
+                                scheduledTasks.add(job.getKey());
+                                Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn on at: " + start.toString());
+                            }
+                            {
+                                JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
+                                                                      .usingJobData(LampTask.START_LAMP, false)
+                                                                      .usingJobData(LampTask.TIMER_ID, t.getId())
+                                                                      .build();
+                                Trigger trigger = newTrigger().startAt(end).withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount()).build();
+                                sched.scheduleJob(job, trigger);
                                 scheduledTasks.add(job.getKey());
                                 Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
-                                //TODO: Misfired tasks (usually tasks that run at midnight)
-                                //TODO: Turn off lamp if server was restarted and lamp should be off
                             }
                         }
+                        //TODO: RGB Lamps
+                    } catch (SchedulerException e) {
+                        Log.e(e);
                     }
-                    //TODO: RGB Lamps
-                } catch (SchedulerException e) {
-                    Log.e(e);
+                }
+                for (Timer t : dayBefore) {
+                    try {
+                        if (ids.contains(t.getId())) {
+                            Date start = getDate(t.getStart());
+                            Date end = getDate(t.getEnd());
+                            if (start.getTime() - end.getTime() > 0) {
+                                if (t.getRGB() == null) {
+                                    JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
+                                                                          .usingJobData(LampTask.START_LAMP, false)
+                                                                          .usingJobData(LampTask.TIMER_ID, t.getId())
+                                                                          .build();
+                                    Trigger trigger = newTrigger().startAt(end).withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount()).build();
+                                    sched.scheduleJob(job, trigger);
+                                    scheduledTasks.add(job.getKey());
+                                    Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
+                                }
+                            }
+                            //TODO: RGB Lamps
+                        }
+                    } catch (SchedulerException e) {
+                        Log.e(e);
+                    }
                 }
             }
         } catch (SQLException e) {

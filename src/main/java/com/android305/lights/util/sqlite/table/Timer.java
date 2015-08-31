@@ -254,7 +254,7 @@ public class Timer {
         }
 
         public static void update(Timer timer) throws SQLException {
-            PreparedStatement updateStmt = c.prepareStatement("UPDATE `timer` SET `START` = ?, `END` = ?, `SUNDAY` = ?, `MONDAY` = ?, `TUESDAY` = ?, `WEDNESDAY` = ?, `THURSDAY` = ?, `FRIDAY` = ?, `SATURDAY` = ?, `STATUS` = ?`RGB` = ?, `GROUP` = ? WHERE `ID` = ?;");
+            PreparedStatement updateStmt = c.prepareStatement("UPDATE `timer` SET `START` = ?, `END` = ?, `SUNDAY` = ?, `MONDAY` = ?, `TUESDAY` = ?, `WEDNESDAY` = ?, `THURSDAY` = ?, `FRIDAY` = ?, `SATURDAY` = ?, `STATUS` = ?, `RGB` = ?, `GROUP` = ? WHERE `ID` = ?;");
             updateStmt.setString(1, timer.start.toString());
             updateStmt.setString(2, timer.end.toString());
             updateStmt.setBoolean(3, timer.sunday);
@@ -267,6 +267,7 @@ public class Timer {
             updateStmt.setInt(10, timer.status);
             updateStmt.setString(11, timer.RGB);
             updateStmt.setInt(12, timer.internalGroupId);
+            updateStmt.setInt(13, timer.id);
             updateStmt.executeUpdate();
             updateStmt.close();
         }

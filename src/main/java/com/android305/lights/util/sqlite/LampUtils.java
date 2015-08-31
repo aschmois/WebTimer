@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import java.sql.SQLException;
 
 public class LampUtils {
-    public static SessionResponse addLamp(JSONObject args) throws SQLException {
+    public static SessionResponse addLamp(long sessionId, JSONObject args) throws SQLException {
         Lamp lampFromJSON = Lamp.getLamp(args.getJSONObject("lamp"));
         String name = lampFromJSON.getName();
         String ip = lampFromJSON.getIpAddress();
@@ -42,8 +42,10 @@ public class LampUtils {
             }
         } catch (SQLConnection.SQLUniqueException e) {
             return new SessionResponse(ServerHandler.LAMP_ALREADY_EXISTS, true, "Lamp " + name + " already exists.");
+        } finally {
+            Group group = Group.DBHelper.getWithLampsAndTimers(groupId);
+            ServerHandler.refreshGroup(sessionId, group);
         }
-        //TODO: send group update to all opened sessions
     }
 
     public static SessionResponse getLamp(JSONObject args) throws SQLException {
@@ -56,17 +58,25 @@ public class LampUtils {
         }
     }
 
-    public static SessionResponse toggleLamp(JSONObject args) throws SQLException {
-        int id = args.getJSONObject("lamp").getInt("id");
-        Lamp lamp = Lamp.DBHelper.get(id);
-        if (lamp != null) {
-            lamp.connect(lamp.getStatus() != Lamp.STATUS_ON, 2);
-            JSONObject parsed = new JSONObject();
-            parsed.put("lamp", lamp.getParsed());
-            return new SessionResponse(ServerHandler.LAMP_TOGGLE_SUCCESS, false, "", parsed);
-        } else {
-            return new SessionResponse(ServerHandler.LAMP_TOGGLE_DOES_NOT_EXIST, true, "Lamp with id `" + id + "` does not exist.");
+    public static SessionResponse toggleLamp(long sessionId, JSONObject args) throws SQLException {
+        int groupId = 0;
+        try {
+            int id = args.getJSONObject("lamp").getInt("id");
+            Lamp lamp = Lamp.DBHelper.get(id);
+            if (lamp != null) {
+                groupId = lamp.getInternalGroupId();
+                lamp.connect(lamp.getStatus() != Lamp.STATUS_ON, 2);
+                JSONObject parsed = new JSONObject();
+                parsed.put("lamp", lamp.getParsed());
+                return new SessionResponse(ServerHandler.LAMP_TOGGLE_SUCCESS, false, "", parsed);
+            } else {
+                return new SessionResponse(ServerHandler.LAMP_TOGGLE_DOES_NOT_EXIST, true, "Lamp with id `" + id + "` does not exist.");
+            }
+        } finally {
+            if (groupId != 0) {
+                Group group = Group.DBHelper.getWithLampsAndTimers(groupId);
+                ServerHandler.refreshGroup(sessionId, group);
+            }
         }
-        //TODO: send group update to all opened sessions
     }
 }
