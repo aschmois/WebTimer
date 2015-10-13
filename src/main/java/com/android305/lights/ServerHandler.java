@@ -73,6 +73,11 @@ public class ServerHandler extends IoHandlerAdapter {
     public final static int LAMP_TOGGLE_SUCCESS = 3300;
     public final static int LAMP_TOGGLE_DOES_NOT_EXIST = 3301;
 
+    public final static int LAMP_EDIT_SUCCESS = 3400;
+    public final static int LAMP_EDIT_GROUP_DOES_NOT_EXIST = 3401;
+
+    public final static int LAMP_DELETE_SUCCESS = 3500;
+
     private final String password;
     private HashMap<Long, Boolean> authenticated = new HashMap<>();
     private SQLConnection c;
@@ -146,17 +151,17 @@ public class ServerHandler extends IoHandlerAdapter {
                 case "get":
                     writeJSON(session, original, actionId, LampUtils.getLamp(args));
                     break;
-                case "update":
-                    //TODO: Update lamp
+                case "edit":
+                    writeJSON(session, original, actionId, LampUtils.editLamp(session.getId(), args));
                     break;
                 case "delete":
-                    //TODO: Delete lamp
+                    writeJSON(session, original, actionId, LampUtils.deleteLamp(session.getId(), args));
                     break;
                 case "toggle":
                     writeJSON(session, original, actionId, LampUtils.toggleLamp(session.getId(), args));
                     break;
                 default:
-                    writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,update,delete,toggle"));
+                    writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,edit,delete,toggle"));
                     break;
             }
         } catch (SQLException e) {
