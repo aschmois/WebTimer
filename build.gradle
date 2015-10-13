@@ -2,6 +2,7 @@ group 'com.android305.lights'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'java-library-distribution'
 
 sourceCompatibility = 1.8
 
@@ -14,7 +15,7 @@ dependencies {
     // Misc Deps
     compile 'org.json:json:20141113'
     compile 'commons-io:commons-io:2.4'
-    
+
     // Logging
     compile 'org.slf4j:slf4j-simple:1.7.12'
 
@@ -29,4 +30,23 @@ dependencies {
 
     // Encryption
     compile 'org.jasypt:jasypt:1.9.2'
+}
+
+distZip.shouldRunAfter(build)
+
+distributions {
+    main {
+        baseName = 'WebTimer'
+    }
+}
+
+jar {
+    // Keep jar clean:
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF', '.settings', '**/Thumbs.db', '.project', '.classpath', 'bin'
+
+    manifest {
+        attributes 'Main-Class': "com.android305.lights.Server",
+                'Class-Path': configurations.runtime.files.collect { "lib/$it.name" }.join(' ')
+    }
+
 }

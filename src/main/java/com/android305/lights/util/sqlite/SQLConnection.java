@@ -4,8 +4,8 @@ import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.table.Group;
 import com.android305.lights.util.sqlite.table.Lamp;
 import com.android305.lights.util.sqlite.table.Timer;
-import com.sun.istack.internal.NotNull;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -58,7 +58,6 @@ public class SQLConnection {
         }
     }
 
-    @NotNull
     private Connection checkConnection() throws SQLException {
         try {
             if (c == null || c.isClosed() || !c.isValid(3)) {
@@ -74,13 +73,23 @@ public class SQLConnection {
 
     public static void insertTestData() {
         try {
+            instance.checkConnection().close();
+        } catch (SQLException ignored) {
+        }
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            new File("timer.db").delete();
+        } catch (Exception ignored) {
+        }
+        instance = new SQLConnection();
+        try {
             Group frontLamps = new Group();
             frontLamps.setName("Front Lamps");
             frontLamps = Group.DBHelper.commit(frontLamps);
 
-            /*Group testLamps = new Group();
-            testLamps.setName("Test Lamps");
-            testLamps = Group.DBHelper.commit(testLamps);*/
+            Group emptyGroup = new Group();
+            emptyGroup.setName("Empty Group");
+            Group.DBHelper.commit(emptyGroup);
 
             Lamp lamp = new Lamp();
             lamp.setName("Porch");
@@ -107,13 +116,13 @@ public class SQLConnection {
             Lamp.DBHelper.apply(lamp);*/
 
             Timer timer = new Timer();
-            timer.setStart(Time.valueOf("04:30:00"));
-            timer.setEnd(Time.valueOf("06:30:00"));
+            timer.setStart(Time.valueOf("04:45:00"));
+            timer.setEnd(Time.valueOf("07:00:00"));
             timer.setInternalGroupId(frontLamps.getId());
             Timer.DBHelper.apply(timer);
 
             timer = new Timer();
-            timer.setStart(Time.valueOf("20:00:00"));
+            timer.setStart(Time.valueOf("19:00:00"));
             timer.setEnd(Time.valueOf("02:00:00"));
             timer.setInternalGroupId(frontLamps.getId());
             Timer.DBHelper.apply(timer);

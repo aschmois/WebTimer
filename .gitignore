@@ -7,3 +7,5 @@ logs/*
 *Thumbs.db*
 working_dir/config.properties
 working_dir/timer.db
+working_dir/
+gradle.properties

@@ -1,5 +1,6 @@
 package com.android305.lights.util.sqlite.table;
 
+import com.android305.lights.Server;
 import com.android305.lights.util.ConnectionResponse;
 import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.SQLConnection;
@@ -208,6 +209,13 @@ public class Lamp {
             updateStmt.close();
         }
 
+        public static void delete(Lamp lamp) throws SQLException {
+            PreparedStatement deleteStmt = c.prepareStatement("DELETE FROM `lamp` WHERE `ID` = ?;");
+            deleteStmt.setInt(1, lamp.id);
+            deleteStmt.executeUpdate();
+            deleteStmt.close();
+        }
+
         public static Lamp resultSetToLamp(ResultSet rs) throws SQLException {
             Lamp lamp = new Lamp();
             lamp.setId(rs.getInt("ID"));
@@ -284,22 +292,28 @@ public class Lamp {
                     param = "0";
             }
             Log.d("Trying to " + (startLamp ? "turn on" : "turn off") + " the lamp at " + ipAddress);
-            conn = (HttpURLConnection) new URL("http://" + ipAddress + "/gpio/" + param).openConnection();
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            int response;
-            if ((response = conn.getResponseCode()) != HttpURLConnection.HTTP_OK) {
-                Log.e("Lamp is throwing an HTTP error: " + response);
-                if (tries > 0) {
-                    connect(startLamp, tries - 1);
-                    return;
-                }
-                setStatus(Lamp.STATUS_ERROR);
-                setError("HTTP Error: " + response);
-            } else {
+            if (Server.DEMO) {
                 Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + ipAddress);
                 setStatus(startLamp ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
                 setError(null);
+            } else {
+                conn = (HttpURLConnection) new URL("http://" + ipAddress + "/gpio/" + param).openConnection();
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                int response;
+                if ((response = conn.getResponseCode()) != HttpURLConnection.HTTP_OK) {
+                    Log.e("Lamp is throwing an HTTP error: " + response);
+                    if (tries > 0) {
+                        connect(startLamp, tries - 1);
+                        return;
+                    }
+                    setStatus(Lamp.STATUS_ERROR);
+                    setError("HTTP Error: " + response);
+                } else {
+                    Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + ipAddress);
+                    setStatus(startLamp ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
+                    setError(null);
+                }
             }
         } catch (java.net.SocketTimeoutException e) {
             Log.w("Lamp timeout retrying... (" + tries + " tries left)", e);
@@ -317,7 +331,7 @@ public class Lamp {
             if (conn != null)
                 try {
                     conn.disconnect();
-                } catch (Exception e) {
+                } catch (Exception ignored) {
                 }
         }
         Lamp.DBHelper.update(this);
@@ -329,26 +343,34 @@ public class Lamp {
         InputStream is = null;
         try {
             Log.d("Getting status of the lamp at " + "http://" + ipAddress + "/gpio/status");
-            conn = (HttpURLConnection) new URL("http://" + ipAddress + "/gpio/status").openConnection();
-            conn.setDoInput(true);
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            int response;
-            if ((response = conn.getResponseCode()) != HttpURLConnection.HTTP_OK) {
-                Log.e("Lamp is throwing an HTTP error: " + response);
-                if (tries > 0)
-                    return retrieveStatus(tries - 1);
-                connectionResponse.setError("HTTP Error: " + response);
-                connectionResponse.setStatus(Lamp.STATUS_ERROR);
-            } else {
-                is = conn.getInputStream();
-                String resp = IOUtils.toString(is, Charset.forName("UTF-8")).split("\n")[2].replace("</html>", "").trim(); //TODO: Update arduino code to remove html code
-                Log.v(resp);
-                int status = Integer.parseInt(resp);
+            if (Server.DEMO) {
+                Log.w("We can't use this method in demo mode. So we are not returning anything important.");
+                int status = getStatus();
                 Log.d("The lamp at " + ipAddress + " is `" + ((status == 1 && !invert) || (status == 0 && invert) ? "On" : "Off") + "`");
                 connectionResponse.setError(null);
                 connectionResponse.setStatus((status == 1 && !invert) || (status == 0 && invert) ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
+            } else {
+                conn = (HttpURLConnection) new URL("http://" + ipAddress + "/gpio/status").openConnection();
+                conn.setDoInput(true);
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                int response;
+                if ((response = conn.getResponseCode()) != HttpURLConnection.HTTP_OK) {
+                    Log.e("Lamp is throwing an HTTP error: " + response);
+                    if (tries > 0)
+                        return retrieveStatus(tries - 1);
+                    connectionResponse.setError("HTTP Error: " + response);
+                    connectionResponse.setStatus(Lamp.STATUS_ERROR);
+                } else {
+                    is = conn.getInputStream();
+                    String resp = IOUtils.toString(is, Charset.forName("UTF-8")).split("\n")[2].replace("</html>", "").trim(); //TODO: Update arduino code to remove html code
+                    Log.v(resp);
+                    int status = Integer.parseInt(resp);
+                    Log.d("The lamp at " + ipAddress + " is `" + ((status == 1 && !invert) || (status == 0 && invert) ? "On" : "Off") + "`");
+                    connectionResponse.setError(null);
+                    connectionResponse.setStatus((status == 1 && !invert) || (status == 0 && invert) ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
+                }
             }
         } catch (java.net.SocketTimeoutException e) {
             Log.w("Lamp timeout retrying... (" + tries + " tries left) | " + e.getLocalizedMessage());

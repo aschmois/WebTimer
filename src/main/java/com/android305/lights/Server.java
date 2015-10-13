@@ -38,13 +38,14 @@ import javax.crypto.SecretKey;
 
 public class Server {
 
+    public static boolean DEMO = false;
+
     private static final int DEFAULT_PORT = 7123;
     private static SecureRandom random = new SecureRandom();
     public static Encryption enc;
     private static Server server;
 
     public static void main(String[] args) {
-        //com.android305.lights.util.sqlite.SQLConnection.insertTestData();
         loadArgs(args);
         int port = -1;
         String sKey = "";
@@ -127,6 +128,10 @@ public class Server {
                             } catch (Exception e) {
                                 Log.e(e);
                             }
+                            break;
+                        case "-test":
+                            DEMO = true;
+                            com.android305.lights.util.sqlite.SQLConnection.insertTestData();
                             break;
                     }
                 }
