@@ -35,8 +35,9 @@ public class ServerHandler extends IoHandlerAdapter {
         Iterator it = openedSessions.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Long, IoSession> pair = (Map.Entry) it.next();
-            if (exclude == null || pair.getKey().equals(exclude))
-                writeJSON(pair.getValue(), "", -1, response);
+            if (exclude == null || !pair.getKey().equals(exclude)) {
+                writeJSON(pair.getValue(), -1, response);
+            }
             it.remove(); // avoids a ConcurrentModificationException
         }
     }
@@ -93,16 +94,16 @@ public class ServerHandler extends IoHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(IoSession session, Object message) throws Exception {
+    public void messageReceived(IoSession session, Object encryptedMessage) throws Exception {
         Runnable run = () -> {
-            String original = Server.enc.decrypt(message.toString().trim());
-            if (!original.equals("ping")) {
-                Log.d(original);
+            String decryptedMessage = Server.enc.decrypt(encryptedMessage.toString().trim());
+            if (!decryptedMessage.equals("ping")) {
+                Log.d("REQUEST: " + decryptedMessage);
             } else {
                 session.write(enc("pong"));
                 return;
             }
-            JSONObject args = new JSONObject(original);
+            JSONObject args = new JSONObject(decryptedMessage);
             String action = args.getString("action");
             int actionId = args.getInt("action_id");
             switch (action) {
@@ -110,10 +111,10 @@ public class ServerHandler extends IoHandlerAdapter {
                     if (!authenticated.containsKey(session.getId())) {
                         if (password.equals(args.getString("password"))) {
                             authenticated.put(session.getId(), true);
-                            writeJSON(session, original, actionId, new SessionResponse(AUTH_SUCCESS, false, "Welcome"));
+                            writeJSON(session, actionId, new SessionResponse(AUTH_SUCCESS, false, "Welcome"));
                         } else {
                             authenticated.put(session.getId(), false);
-                            writeJSON(session, original, actionId, new SessionResponse(ERROR_FAILED_AUTHENTICATION, true, "Incorrect password"));
+                            writeJSON(session, actionId, new SessionResponse(ERROR_FAILED_AUTHENTICATION, true, "Incorrect password"));
                         }
                     }
                     return;
@@ -126,51 +127,51 @@ public class ServerHandler extends IoHandlerAdapter {
             if (authenticated.containsKey(session.getId())) {
                 switch (action) {
                     case "lamp":
-                        lampAction(session, original, actionId, args);
+                        lampAction(session, actionId, args);
                         break;
                     case "group":
-                        groupAction(session, original, actionId, args);
+                        groupAction(session, actionId, args);
                         break;
                     default:
-                        writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "Unknown command: " + action));
+                        writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "Unknown command: " + action));
                         break;
                 }
             } else {
-                writeJSON(session, original, actionId, new SessionResponse(ERROR_NOT_AUTHENTICATED, true, "Not authenticated"));
+                writeJSON(session, actionId, new SessionResponse(ERROR_NOT_AUTHENTICATED, true, "Not authenticated"));
             }
         };
         new Thread(run).start();
     }
 
-    private void lampAction(IoSession session, String original, int actionId, JSONObject args) {
+    private void lampAction(IoSession session, int actionId, JSONObject args) {
         try {
             switch (args.getString("secondary_action")) {
                 case "add":
-                    writeJSON(session, original, actionId, LampUtils.addLamp(session.getId(), args));
+                    writeJSON(session, actionId, LampUtils.addLamp(session.getId(), args));
                     break;
                 case "get":
-                    writeJSON(session, original, actionId, LampUtils.getLamp(args));
+                    writeJSON(session, actionId, LampUtils.getLamp(args));
                     break;
                 case "edit":
-                    writeJSON(session, original, actionId, LampUtils.editLamp(session.getId(), args));
+                    writeJSON(session, actionId, LampUtils.editLamp(session.getId(), args));
                     break;
                 case "delete":
-                    writeJSON(session, original, actionId, LampUtils.deleteLamp(session.getId(), args));
+                    writeJSON(session, actionId, LampUtils.deleteLamp(session.getId(), args));
                     break;
                 case "toggle":
-                    writeJSON(session, original, actionId, LampUtils.toggleLamp(session.getId(), args));
+                    writeJSON(session, actionId, LampUtils.toggleLamp(session.getId(), args));
                     break;
                 default:
-                    writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,edit,delete,toggle"));
+                    writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,edit,delete,toggle"));
                     break;
             }
         } catch (SQLException e) {
             Log.e(e);
-            writeJSON(session, original, actionId, new SessionResponse(LAMP_SQL_ERROR, true, e.getMessage()));
+            writeJSON(session, actionId, new SessionResponse(LAMP_SQL_ERROR, true, e.getMessage()));
         }
     }
 
-    private void groupAction(IoSession session, String original, int actionId, JSONObject args) {
+    private void groupAction(IoSession session, int actionId, JSONObject args) {
         try {
             switch (args.getString("secondary_action")) {
                 case "add":
@@ -180,7 +181,7 @@ public class ServerHandler extends IoHandlerAdapter {
                     //TODO: Get group
                     break;
                 case "get-all":
-                    writeJSON(session, original, actionId, GroupUtils.getGroups());
+                    writeJSON(session, actionId, GroupUtils.getGroups());
                     break;
                 case "update":
                     //TODO: Update group
@@ -189,12 +190,12 @@ public class ServerHandler extends IoHandlerAdapter {
                     //TODO: Delete group
                     break;
                 default:
-                    writeJSON(session, original, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,get-all,update,delete"));
+                    writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,get-all,update,delete"));
                     break;
             }
         } catch (SQLException e) {
             Log.e(e);
-            writeJSON(session, original, actionId, new SessionResponse(LAMP_SQL_ERROR, true, e.getMessage()));
+            writeJSON(session, actionId, new SessionResponse(LAMP_SQL_ERROR, true, e.getMessage()));
         }
     }
 
@@ -228,18 +229,17 @@ public class ServerHandler extends IoHandlerAdapter {
         session.getReadMessages();
     }
 
-    private static void writeJSON(IoSession session, String original, int actionId, SessionResponse response) throws EncryptionOperationNotPossibleException {
+    private static void writeJSON(IoSession session, int actionId, SessionResponse response) throws EncryptionOperationNotPossibleException {
         if (session != null) {
             JSONObject json = new JSONObject();
             json.put("action_id", actionId);
             json.put("error", response.isError());
             json.put("code", response.getCode());
             json.put("message", response.getMessage());
-            json.put("original", original);
             if (response.getData() != null)
                 json.put("data", response.getData());
             if (Log.VERBOSE) {
-                Log.v(json.toString());
+                Log.v("RESPONSE: " + json.toString());
             }
             session.write(enc(json.toString()));
         }
