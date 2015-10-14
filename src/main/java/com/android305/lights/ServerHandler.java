@@ -32,7 +32,8 @@ public class ServerHandler extends IoHandlerAdapter {
         JSONObject groupParsed = new JSONObject();
         groupParsed.put("group", group.getParsed());
         SessionResponse response = new SessionResponse(GROUP_REFRESH, false, "", groupParsed);
-        Iterator it = openedSessions.entrySet().iterator();
+        //TODO: Maybe not the greatest idea to clone this hashmap, but I don't know how else to do it. it.remove() will remove sessions from my map
+        Iterator it = ((HashMap) openedSessions.clone()).entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Long, IoSession> pair = (Map.Entry) it.next();
             if (exclude == null || !pair.getKey().equals(exclude)) {
