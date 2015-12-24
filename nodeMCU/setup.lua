@@ -1,7 +1,7 @@
 local wifiConfig = {}
 local pin = 10
 local value = gpio.LOW
-function toggleLED ()
+function toggleLED()
     if value == gpio.LOW then
         value = gpio.HIGH
     else
@@ -22,7 +22,6 @@ function urldecode(s)
 end
 
 function parsevars(s)
-  --s = s:match('%s+(.+)')
   local ans = {}
   for k,v in s:gmatch('([^&=?]-)=([^&=?]+)' ) do
     ans[ k ] = urldecode(v)
@@ -77,17 +76,14 @@ wifiConfig.pwd="12345678"
 wifi.setmode(wifi.SOFTAP)
 wifi.ap.config(wifiConfig)
 
-tmr.alarm (1, 800, 1, function ( )
-  if wifi.ap.getip() == nil then
-     print("Waiting for Wifi connection")
-  else
-     tmr.stop(1)
-     print("Config done, IP is " .. wifi.ap.getip())
-	 print('AP MAC: ',wifi.ap.getmac())
-  end
+tmr.alarm(1, 800, 1, function()
+	if wifi.ap.getip() == nil then
+		print("Waiting for AP setup")
+	else
+		tmr.stop(1)
+		print("IP: " .. wifi.ap.getip())
+		print('AP MAC: ',wifi.ap.getmac())
+		local svr = net.createServer(net.TCP, 30)
+		svr:listen(80, connect)
+	end
 end)
-
-svr = net.createServer(net.TCP, 30)
-
-svr:listen(80, connect)
-

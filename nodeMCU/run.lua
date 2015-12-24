@@ -1,4 +1,3 @@
--- Wifi connection data
 local wifiConfig = {}
 wifiConfig.staticIp = {}
 
@@ -6,35 +5,40 @@ if(file.open("config", "r") ~= nil) then
 	local function read ()
 		local buf = file.readline()
 		if(buf ~= nil) then
-			buf = string.gsub(buf, "n", "")
+			buf = string.gsub(buf, "\n", "")
 		else
 			buf = ""
 		end
 		return buf
 	end
 	
-	wifiConfig.ssid = read()
-	wifiConfig.ssidPassword = read()
-	wifiConfig.staticIp.ip = read()
-	wifiConfig.staticIp.netmask = read()
-	wifiConfig.staticIp.gateway = read()
+	wifiConfig.ssid = read()..""
+	wifiConfig.ssidPassword = read()..""
+	wifiConfig.staticIp.ip = read()..""
+	wifiConfig.staticIp.netmask = read()..""
+	wifiConfig.staticIp.gateway = read()..""
 	
+	print("-- CONFIGURATION --")
+	print("SSID: " .. wifiConfig.ssid)
+	print("Password: *****") -- .. wifiConfig.ssidPassword)
+	print("IP: " .. wifiConfig.staticIp.ip)
+	print("Netmask: " .. wifiConfig.staticIp.netmask)
+	print("Gateway: " .. wifiConfig.staticIp.gateway)
+	print("-- END CONFIGURATION --")
 	file.close()
-	
 end
 
 -- Lamp setup
 local lamp = {}
-lamp.pin = 4 -- this is GPIO0
+lamp.pin = 4
 lamp.status = 1
-gpio.mode(lamp.pin,gpio.OUTPUT)
-gpio.write(lamp.pin,gpio.HIGH)
+gpio.mode(lamp.pin, gpio.OUTPUT)
+gpio.write(lamp.pin, gpio.LOW)
 
-local function connect (conn, data)
-   local query_data
-
+local function connect(conn)
    conn:on ("receive",
-   	function (cn, request)
+   	function (conn, request)
+		print(request)
 		local buf = ""
 		local _, _, method, path, vars = string.find(request, "([A-Z]+) (.+)?(.+) HTTP")
         if(method == nil)then
@@ -46,14 +50,18 @@ local function connect (conn, data)
                 _GET[k] = v
             end
         end
-        cn:send("HTTP/1.1 200/OK\r\nServer: NodeLuau\r\nContent-Type: text/html\r\n\r\n")
+        buf = buf.."HTTP/1.1 200/OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
 		if(_GET.light == "0" or _GET.pin == "OFF") then
-			gpio.write(lamp.pin, gpio.LOW)
+			gpio.write(lamp.pin, gpio.HIGH)
 			lamp.status = 0
 	    elseif(_GET.light == "1" or _GET.pin == "ON") then
-			gpio.write(lamp.pin, gpio.HIGH)
+			gpio.write(lamp.pin, gpio.LOW)
 			lamp.status = 1
         end
+		if(_GET.setup == 1) then
+			file.remove("config")
+			node.restart()
+		end
 		if(_GET.status == "1") then
 			buf = buf..lamp.status
 		else
@@ -67,50 +75,28 @@ local function connect (conn, data)
 			end
 			buf = buf.."</font></p>"
 		end
-		cn:send(buf);
-	  -- Close the connection for the request
-        cn:close()
-		collectgarbage()
+		buf = buf.."</html>"
+		conn:send(buf);
+        conn:close()
     end)
 end
 
--- Configure the ESP as a station (client)
 wifi.setmode(wifi.STATION)
 wifi.sta.config(wifiConfig.ssid, wifiConfig.ssidPassword)
 wifi.sta.setip(wifiConfig.staticIp)
 
--- Hang out until we get a wifi connection before the httpd server is started.
-tmr.alarm (1, 800, 1, function ( )
-  if wifi.sta.getip ( ) == nil then
-     print ("Waiting for Wifi connection")
-  else
-     tmr.stop (1)
-     print ("Config done, IP is " .. wifi.sta.getip ( ))
-  end
-end)
+function check_wifi()
+	wifi.sta.connect()
+	local ip = wifi.sta.getip()
 
-local joinCounter = 0
-local joinMaxAttempts = 5
-tmr.alarm(0, 3000, 1, function()
-    local ip = wifi.sta.getip()
-    if ip == nil and joinCounter < joinMaxAttempts then
-        print('Connecting to WiFi Access Point ...')
-		joinCounter = joinCounter + 1
-    else
-		if joinCounter == joinMaxAttempts then
-			print('Failed to connect to WiFi Access Point.')
-		else
-			print('IP: ',ip)
-		end
-		tmr.stop(0)
-		joinCounter = nil
-		joinMaxAttempts = nil
-		collectgarbage()
+	if(ip==nil) then
+		print("Connecting...")
+	else
+		tmr.stop(1)
+		print("IP: " .. wifi.sta.getip())
+		local svr = net.createServer(net.TCP)
+		svr:listen(80, connect)
 	end
-end)
+end
 
--- Create the httpd server
-svr = net.createServer (net.TCP, 30)
-
--- Server listening on port 80, call connect function if a request is received
-svr:listen (80, connect)
+tmr.alarm(1,3000,1,check_wifi)
