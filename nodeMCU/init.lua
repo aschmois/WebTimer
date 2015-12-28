@@ -1,25 +1,27 @@
 gpio1 = 10
-local function doCompile(lua)
+function doCompile(lua)
 	local name = lua..".lua"
 	
 	if(file.open(name, "r") ~= nil) then
+		file.close()
 		print("Compiling: " .. lua)
 		node.compile(name)
-		file.close()
 		file.remove(name)
 	end
 end
-
-doCompile("upgrader")
-doCompile("utils")
-doCompile("factoryReset")
-doCompile("setup")
-doCompile("run")
-dofile("utils.lc")
-dofile("factoryReset.lc")
-dofile("upgrader.lc")
-if(file.open("config", "r") ~= nil) then
-	dofile("run.lc")
+if(file.open("ota.lua", "r") ~= nil or file.open("ota.lc", "r") ~= nil) then
+	file.close()
+	if(file.open("ota.lua", "r") ~= nil) then
+		file.close()
+		print("Doing OTA update...")
+		node.compile("ota.lua")
+		file.remove("ota.lua")
+	else
+		print("Continuing OTA update...")
+	end
+	collectgarbage()
+	dofile("ota.lc")
 else
-	dofile("setup.lc")
+	doCompile("normalinit")
+	dofile("normalinit.lc")
 end
