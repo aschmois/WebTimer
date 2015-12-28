@@ -29,6 +29,11 @@ if(file.open("config", "r") ~= nil) then
 	print("IP: " .. wifiConfig.staticIp.ip)
 	print("Netmask: " .. wifiConfig.staticIp.netmask)
 	print("Gateway: " .. wifiConfig.staticIp.gateway)
+	if(passcode ~= nil and passcode ~= "") then
+		print("Passcode: Yes")
+	else
+		print("Passcode: No")
+	end
 	print("-- END CONFIGURATION --")
 	file.close()
 	collectgarbage()
@@ -104,7 +109,11 @@ local function connect(conn)
 				wifiConfig.staticIp.gateway = _GET.gateway
 			end
 			if(_GET.changePasscode ~= nil) then
-				passcode = _GET.changePasscode
+				if(_GET.changePasscode == "") then
+					passcode = nil
+				else
+					passcode = _GET.changePasscode
+				end
 			end
 			writeConfig(wifiConfig.ssid, wifiConfig.ssidPassword, wifiConfig.staticIp.ip, wifiConfig.staticIp.netmask, wifiConfig.staticIp.gateway, passcode)
 			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
@@ -130,7 +139,15 @@ local function connect(conn)
 		else
 			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
 			buf = buf.."<h1> ESP8266 Web Server</h1>"
-			buf = buf.."<p>LAMP <a href=\"?passcode="..passcode.."&pin=ON\"><button>ON</button></a>&nbsp;<a href=\"?passcode="..passcode.."&pin=OFF\"><button>OFF</button></a></p>"
+			buf = buf.."<p>LAMP <a href=\"?"
+			if(pascode ~= nil) then
+				buf = buf.."passcode="..passcode.."&"
+			end
+			buf = buf.."pin=ON\"><button>ON</button></a>&nbsp;<a href=\"?"
+			if(pascode ~= nil) then
+				buf = buf.."passcode="..passcode.."&"
+			end
+			buf = buf.."pin=OFF\"><button>OFF</button></a></p>"
 			buf = buf.."<p>LAMP is <font color="
 			if(lamp.status == 1) then
 				buf = buf.."\"green\">ON"
