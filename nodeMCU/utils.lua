@@ -23,3 +23,22 @@ function toggleGPIO1LED()
     end
     gpio.write(gpio1, gpio1Value)
 end
+
+function writeConfig(ssid, pwd, ip, mask, gateway, passcode)
+	file.open("config", "w+")
+	file.writeline(ssid)
+	if(pwd ~= nil) then
+		file.writeline(pwd)
+	else
+		file.writeline("")
+	end
+	file.writeline(ip)
+	file.writeline(mask)
+	file.writeline(gateway)
+	if(passcode ~= nil) then
+		file.writeline(passcode)
+	end
+	file.flush()
+	file.close()
+	collectgarbage()
+end

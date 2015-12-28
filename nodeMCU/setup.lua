@@ -21,38 +21,24 @@ local function connect (conn, data)
             _GET = parsevars(vars)
         end
 		if(_GET.ssid ~= nil) then
-			file.open("config", "w+")
-			file.writeline(_GET.ssid)
-			if(_GET.pwd ~= nil) then
-				file.writeline(_GET.pwd)
-			else
-				file.writeline("")
-			end
-			file.writeline(_GET.ip)
-			file.writeline(_GET.mask)
-			file.writeline(_GET.gateway)
-			if(_GET.passcode ~= nil) then
-				file.writeline(_GET.passcode)
-			end
-			file.flush()
-			file.close()
+			writeConfig(_GET.ssid, _GET.pwd, _GET.ip, _GET.mask, _GET.gateway, _GET.passcode)
 			buf = buf .. "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
 			buf = buf.."1"
 			cn:send(buf);
 			cn:close()
-			collectgarbage()
-		elseif(_GET.restart == "1") then
-			tmr.alarm(2, 2000, 0, function()
-				node.restart()
-			end)
 		else
 			buf = buf .. "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
 			buf = buf.."<h1> ESP8266 Web Server Config</h1>"
 			buf = buf.."<p>Chip needs configuration, use app.</p></html>"
 			cn:send(buf);
 			cn:close()
-			collectgarbage()
 		end
+		if(_GET.restart == "1") then
+			tmr.alarm(2, 2000, 0, function()
+				node.restart()
+			end)
+		end
+		collectgarbage()
     end)
 end
 
