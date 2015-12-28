@@ -26,6 +26,8 @@ if(file.open("config", "r") ~= nil) then
 	print("Gateway: " .. wifiConfig.staticIp.gateway)
 	print("-- END CONFIGURATION --")
 	file.close()
+else
+	node.restart()
 end
 
 -- Lamp setup
@@ -38,19 +40,16 @@ gpio.write(lamp.pin, gpio.LOW)
 local function connect(conn)
    conn:on ("receive",
    	function (conn, request)
-		print(request)
 		local buf = ""
 		local _, _, method, path, vars = string.find(request, "([A-Z]+) (.+)?(.+) HTTP")
         if(method == nil)then
             _, _, method, path = string.find(request, "([A-Z]+) (.+) HTTP")
         end
         local _GET = {}
-        if (vars ~= nil)then
-            for k, v in string.gmatch(vars, "(%w+)=(%w+)&*") do
-                _GET[k] = v
-            end
+        if (vars ~= nil) then
+            _GET = parsevars(vars)
         end
-        buf = buf.."HTTP/1.1 200/OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
+        
 		if(_GET.light == "0" or _GET.pin == "OFF") then
 			gpio.write(lamp.pin, gpio.HIGH)
 			lamp.status = 0
@@ -58,13 +57,27 @@ local function connect(conn)
 			gpio.write(lamp.pin, gpio.LOW)
 			lamp.status = 1
         end
-		if(_GET.setup == 1) then
+		if(_GET.setup == "1") then
 			file.remove("config")
-			node.restart()
+			tmr.alarm(2, 2000, 0, function()
+				node.restart()
+			end)
 		end
 		if(_GET.status == "1") then
+			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
 			buf = buf..lamp.status
+			conn:send(buf)
+			conn:close()
+		elseif(_GET.ota ~= nil) then
+			if(update(_GET.ota, _GET.otaURL, conn, _GET.restart) == false) then
+				buf = buf.."HTTP/1.1 500\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
+				buf = buf.."0"
+				buf = buf.."\nBROKEN URL"
+				conn:send(buf)
+				conn:close()
+			end
 		else
+			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
 			buf = buf.."<h1> ESP8266 Web Server</h1>"
 			buf = buf.."<p>LAMP <a href=\"?pin=ON\"><button>ON</button></a>&nbsp;<a href=\"?pin=OFF\"><button>OFF</button></a></p>"
 			buf = buf.."<p>LAMP is <font color="
@@ -74,10 +87,10 @@ local function connect(conn)
 				buf = buf.."\"red\">OFF"
 			end
 			buf = buf.."</font></p>"
+			buf = buf.."</html>"
+			conn:send(buf)
+			conn:close()
 		end
-		buf = buf.."</html>"
-		conn:send(buf);
-        conn:close()
     end)
 end
 
@@ -96,6 +109,8 @@ function check_wifi()
 		print("IP: " .. wifi.sta.getip())
 		local svr = net.createServer(net.TCP)
 		svr:listen(80, connect)
+		gpio.mode(gpio1, gpio.OUTPUT)
+		gpio.write(gpio1, gpio.LOW)
 	end
 end
 

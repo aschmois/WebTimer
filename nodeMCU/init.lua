@@ -1,18 +1,23 @@
-local wifiConfig = {}
-wifiConfig.staticIp = {}
-
-if(file.open("setup.lua", "r") ~= nil) then
-	node.compile("setup.lua")
-	file.close()
-	file.remove("setup.lua")
+gpio1 = 10
+local function doCompile(lua)
+	local name = lua..".lua"
+	
+	if(file.open(name, "r") ~= nil) then
+		print("Compiling: " .. lua)
+		node.compile(name)
+		file.close()
+		file.remove(name)
+	end
 end
 
-if(file.open("run.lua", "r") ~= nil) then
-	node.compile("run.lua")
-	file.close()
-	file.remove("run.lua")
-end
-
+doCompile("upgrader")
+doCompile("utils")
+doCompile("factoryReset")
+doCompile("setup")
+doCompile("run")
+dofile("utils.lc")
+dofile("factoryReset.lc")
+dofile("upgrader.lc")
 if(file.open("config", "r") ~= nil) then
 	dofile("run.lc")
 else

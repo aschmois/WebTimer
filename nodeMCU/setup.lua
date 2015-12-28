@@ -1,34 +1,10 @@
 local wifiConfig = {}
-local pin = 10
-local value = gpio.LOW
-function toggleLED()
-    if value == gpio.LOW then
-        value = gpio.HIGH
-    else
-        value = gpio.LOW
-    end
-    gpio.write(pin, value)
-end
-gpio.mode(pin, gpio.OUTPUT)
-gpio.write(pin, value)
-tmr.alarm(0, 1000, 1, toggleLED)
 
-function urldecode(s)
-  s = s:gsub('+', ' ')
-       :gsub('%%(%x%x)', function(h)
-							return string.char(tonumber(h, 16))
-						 end)
-  return s
+if(gpio.read(3) ~= 0) then
+	gpio.mode(gpio1, gpio.OUTPUT)
+	gpio.write(gpio1, gpio.LOW)
+	tmr.alarm(5, 1000, 1, toggleGPIO1LED)
 end
-
-function parsevars(s)
-  local ans = {}
-  for k,v in s:gmatch('([^&=?]-)=([^&=?]+)' ) do
-    ans[ k ] = urldecode(v)
-  end
-  return ans
-end
-
 
 local function connect (conn, data)
    local query_data
@@ -44,25 +20,35 @@ local function connect (conn, data)
         if (vars ~= nil) then
             _GET = parsevars(vars)
         end
-        cn:send("HTTP/1.1 200/OK\r\nServer: NodeLuau\r\nContent-Type: text/html\r\n\r\n")
-		
 		if(_GET.ssid ~= nil) then
 			file.open("config", "w+")
 			file.writeline(_GET.ssid)
-			file.writeline(_GET.pwd)
+			if(_GET.pwd ~= nil) then
+				file.writeline(_GET.pwd)
+			else
+				file.writeline("")
+			end
 			file.writeline(_GET.ip)
 			file.writeline(_GET.mask)
 			file.writeline(_GET.gateway)
+			if(_GET.passcode ~= nil) then
+				file.writeline(_GET.passcode)
+			end
 			file.flush()
 			file.close()
+			buf = buf .. "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
 			buf = buf.."1"
 			cn:send(buf);
 			cn:close()
 			collectgarbage()
-			node.restart()
+		elseif(_GET.restart == "1") then
+			tmr.alarm(2, 2000, 0, function()
+				node.restart()
+			end)
 		else
+			buf = buf .. "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
 			buf = buf.."<h1> ESP8266 Web Server Config</h1>"
-			buf = buf.."<p>Chip needs configuration, use app.</p>"
+			buf = buf.."<p>Chip needs configuration, use app.</p></html>"
 			cn:send(buf);
 			cn:close()
 			collectgarbage()
