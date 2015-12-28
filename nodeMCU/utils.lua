@@ -1,3 +1,5 @@
+HTTPOKPLAIN = "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
+HTTPOKHTML = "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
 function urldecode(s)
   s = s:gsub('+', ' ')
        :gsub('%%(%x%x)', function(h)

@@ -65,7 +65,7 @@ local function connect(conn)
 				buf = buf.."HTTP/1.1 403\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
 				buf = buf.."PASSCODE INCORRECT"
 			else
-				buf = buf.."HTTP/1.1 200\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
+				buf = buf..HTTPOKHTML
 				buf = buf.."Passcode incorrect, enter one now:<br>"
 				buf = buf.."<form action=\"/\" method=\"get\">"
 				buf = buf.."Passcode:<br><input type=\"text\" name=\"passcode\">"
@@ -85,7 +85,7 @@ local function connect(conn)
         end
 		if(_GET.factoryreset == "1") then
 			file.remove("config")
-			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
+			buf = buf..HTTPOKPLAIN
 			buf = buf.."1"
 			conn:send(buf)
 			conn:close()
@@ -116,7 +116,7 @@ local function connect(conn)
 				end
 			end
 			writeConfig(wifiConfig.ssid, wifiConfig.ssidPassword, wifiConfig.staticIp.ip, wifiConfig.staticIp.netmask, wifiConfig.staticIp.gateway, passcode)
-			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
+			buf = buf..HTTPOKPLAIN
 			buf = buf.."1"
 			conn:send(buf)
 			conn:close()
@@ -124,8 +124,13 @@ local function connect(conn)
 				node.restart()
 			end)
 		elseif(_GET.status == "1") then
-			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
+			buf = buf..HTTPOKPLAIN
 			buf = buf..lamp.status
+			conn:send(buf)
+			conn:close()
+		elseif(_GET.version == "1") then
+			buf = buf..HTTPOKPLAIN
+			buf = buf..version
 			conn:send(buf)
 			conn:close()
 		elseif(_GET.ota ~= nil) then
@@ -137,7 +142,7 @@ local function connect(conn)
 				conn:close()
 			end
 		else
-			buf = buf.."HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
+			buf = buf..HTTPOKHTML
 			buf = buf.."<h1> ESP8266 Web Server</h1>"
 			buf = buf.."<p>LAMP <a href=\"?"
 			if(pascode ~= nil) then

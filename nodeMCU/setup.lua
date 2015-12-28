@@ -22,12 +22,12 @@ local function connect (conn, data)
         end
 		if(_GET.ssid ~= nil) then
 			writeConfig(_GET.ssid, _GET.pwd, _GET.ip, _GET.mask, _GET.gateway, _GET.passcode)
-			buf = buf .. "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/plain\r\n\r\n"
+			buf = buf..HTTPOKPLAIN
 			buf = buf.."1"
 			cn:send(buf);
 			cn:close()
 		else
-			buf = buf .. "HTTP/1.1 200 OK\r\nServer: WiFi Relay\r\nContent-Type: text/html\r\n\r\n<html>"
+			buf = buf..HTTPOKHTML
 			buf = buf.."<h1> ESP8266 Web Server Config</h1>"
 			buf = buf.."<p>Chip needs configuration, use app.</p></html>"
 			cn:send(buf);

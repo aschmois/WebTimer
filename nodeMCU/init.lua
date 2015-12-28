@@ -9,6 +9,9 @@ function doCompile(lua)
 		file.remove(name)
 	end
 end
+doCompile("version")
+dofile("version.lc")
+print("WiFi Relay v"..version)
 if(file.open("ota.lua", "r") ~= nil or file.open("ota.lc", "r") ~= nil) then
 	file.close()
 	if(file.open("ota.lua", "r") ~= nil) then
