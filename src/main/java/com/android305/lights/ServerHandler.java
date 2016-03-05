@@ -5,6 +5,7 @@ import com.android305.lights.util.SessionResponse;
 import com.android305.lights.util.sqlite.GroupUtils;
 import com.android305.lights.util.sqlite.LampUtils;
 import com.android305.lights.util.sqlite.SQLConnection;
+import com.android305.lights.util.sqlite.TimerUtils;
 import com.android305.lights.util.sqlite.table.Group;
 
 import org.apache.mina.core.service.IoHandlerAdapter;
@@ -80,6 +81,19 @@ public class ServerHandler extends IoHandlerAdapter {
 
     public final static int LAMP_DELETE_SUCCESS = 3500;
 
+    /* Timer */
+    public final static int TIMER_SQL_ERROR = 4000;
+
+    public final static int TIMER_ADD_SUCCESS = 4100;
+
+    public final static int TIMER_GET_SUCCESS = 4200;
+    public final static int TIMER_GET_DOES_NOT_EXIST = 4201;
+
+    public final static int TIMER_EDIT_SUCCESS = 4400;
+    public final static int TIMER_EDIT_GROUP_DOES_NOT_EXIST = 4401;
+
+    public final static int TIMER_DELETE_SUCCESS = 4500;
+
     private final String password;
     private HashMap<Long, Boolean> authenticated = new HashMap<>();
     private SQLConnection c;
@@ -133,6 +147,9 @@ public class ServerHandler extends IoHandlerAdapter {
                     case "group":
                         groupAction(session, actionId, args);
                         break;
+                    case "timer":
+                        timerAction(session, actionId, args);
+                        break;
                     default:
                         writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "Unknown command: " + action));
                         break;
@@ -169,6 +186,31 @@ public class ServerHandler extends IoHandlerAdapter {
         } catch (SQLException e) {
             Log.e(e);
             writeJSON(session, actionId, new SessionResponse(LAMP_SQL_ERROR, true, e.getMessage()));
+        }
+    }
+
+    private void timerAction(IoSession session, int actionId, JSONObject args) {
+        try {
+            switch (args.getString("secondary_action")) {
+                case "add":
+                    writeJSON(session, actionId, TimerUtils.addTimer(session.getId(), args));
+                    break;
+                case "get":
+                    writeJSON(session, actionId, TimerUtils.getTimer(args));
+                    break;
+                case "edit":
+                    writeJSON(session, actionId, TimerUtils.editTimer(session.getId(), args));
+                    break;
+                case "delete":
+                    writeJSON(session, actionId, TimerUtils.deleteTimer(session.getId(), args));
+                    break;
+                default:
+                    writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,edit,delete"));
+                    break;
+            }
+        } catch (SQLException e) {
+            Log.e(e);
+            writeJSON(session, actionId, new SessionResponse(TIMER_SQL_ERROR, true, e.getMessage()));
         }
     }
 

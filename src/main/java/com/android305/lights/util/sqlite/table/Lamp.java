@@ -291,13 +291,14 @@ public class Lamp {
                 else
                     param = "0";
             }
-            Log.d("Trying to " + (startLamp ? "turn on" : "turn off") + " the lamp at " + ipAddress);
+            String url = "http://" + ipAddress + "/?light=" + param;
+            Log.d("Trying to " + (startLamp ? "turn on" : "turn off") + " the lamp at " + url);
             if (Server.DEMO) {
-                Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + ipAddress);
+                Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + url);
                 setStatus(startLamp ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
                 setError(null);
             } else {
-                conn = (HttpURLConnection) new URL("http://" + ipAddress + "/gpio/" + param).openConnection();
+                conn = (HttpURLConnection) new URL(url).openConnection();
                 conn.setConnectTimeout(5000);
                 conn.setReadTimeout(5000);
                 int response;
@@ -310,7 +311,7 @@ public class Lamp {
                     setStatus(Lamp.STATUS_ERROR);
                     setError("HTTP Error: " + response);
                 } else {
-                    Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + ipAddress);
+                    Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + url);
                     setStatus(startLamp ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
                     setError(null);
                 }
@@ -341,16 +342,17 @@ public class Lamp {
         ConnectionResponse connectionResponse = new ConnectionResponse();
         HttpURLConnection conn = null;
         InputStream is = null;
+        String url = "http://" + ipAddress + "/?status=1";
         try {
-            Log.d("Getting status of the lamp at " + "http://" + ipAddress + "/gpio/status");
+            Log.d("Getting status of the lamp at " + url);
             if (Server.DEMO) {
-                Log.w("We can't use this method in demo mode. So we are not returning anything important.");
+                Log.w("We can't use retrieveStatus method in demo mode. So we are not returning anything important.");
                 int status = getStatus();
                 Log.d("The lamp at " + ipAddress + " is `" + ((status == 1 && !invert) || (status == 0 && invert) ? "On" : "Off") + "`");
                 connectionResponse.setError(null);
                 connectionResponse.setStatus((status == 1 && !invert) || (status == 0 && invert) ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
             } else {
-                conn = (HttpURLConnection) new URL("http://" + ipAddress + "/gpio/status").openConnection();
+                conn = (HttpURLConnection) new URL(url).openConnection();
                 conn.setDoInput(true);
                 conn.setRequestMethod("GET");
                 conn.setConnectTimeout(5000);
@@ -389,7 +391,7 @@ public class Lamp {
             try {
                 if (conn != null)
                     conn.disconnect();
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         return connectionResponse;

@@ -221,7 +221,7 @@ public class Timer {
             return getAll("SELECT * FROM `timer` WHERE `SATURDAY` = 1;");
         }
 
-        public static Timer commit(Timer timer) throws SQLException, SQLConnection.SQLUniqueException {
+        public static Timer commit(Timer timer) throws SQLException {
             apply(timer);
             PreparedStatement selectStmt = c.prepareStatement("SELECT * FROM `timer` ORDER BY `ID` DESC LIMIT 1;");
             ResultSet rs = selectStmt.executeQuery();
@@ -288,6 +288,13 @@ public class Timer {
             timer.setRGB(rs.getString("RGB"));
             timer.setInternalGroupId(rs.getInt("GROUP"));
             return timer;
+        }
+
+        public static void delete(Timer timer) throws SQLException {
+            PreparedStatement deleteStmt = c.prepareStatement("DELETE FROM `timer` WHERE `ID` = ?;");
+            deleteStmt.setInt(1, timer.id);
+            deleteStmt.executeUpdate();
+            deleteStmt.close();
         }
     }
 
