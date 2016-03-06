@@ -10,6 +10,7 @@ import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.filter.codec.textline.TextLineCodecFactory;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
+import org.apache.mina.util.Base64;
 import org.jasypt.util.text.BasicTextEncryptor;
 
 import java.io.File;
@@ -225,15 +226,20 @@ public class Server {
                     break;
                 case "qr":
                     String qrData = String.format("%s:%d|%s|%s", host, port, password, sKey);
+                    Log.v("QR data: " + qrData);
                     BasicTextEncryptor textEncryptor = new BasicTextEncryptor();
                     textEncryptor.setPassword("deadpoolisawesome");
-                    Log.v("Raw qr data: " + qrData);
-                    qrData = textEncryptor.encrypt(qrData); //TODO: url encode
+                    qrData = textEncryptor.encrypt(qrData);
+                    Log.v("Encrypted qr data: " + qrData);
+                    qrData = new String(Base64.encodeBase64(qrData.getBytes()));
+                    Log.v("Base 64 Encoded qr data: " + qrData);
                     String qr = "https://chart.googleapis.com/chart?cht=qr&chld=M|4&chs=547x547&chl=" + qrData;
                     Log.i(qr);
                     PrintWriter out = new PrintWriter("qr.txt");
                     out.write(qr);
                     out.close();
+
+                    //TODO: add email qr url functionality
                     break;
                 default:
                     Log.i("Unknown command");
