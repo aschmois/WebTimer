@@ -94,15 +94,15 @@ public class SQLConnection {
             Lamp lamp = new Lamp();
             lamp.setName("Porch");
             lamp.setIpAddress("192.168.1.20");
-            lamp.setInvert(true);
+            lamp.setInvert(false);
             lamp.setStatus(1);
             lamp.setInternalGroupId(frontLamps.getId());
             Lamp.DBHelper.apply(lamp);
 
             lamp = new Lamp();
             lamp.setName("Front");
-            lamp.setIpAddress("192.168.1.21");
-            lamp.setInvert(true);
+            lamp.setIpAddress("192.168.1.23");
+            lamp.setInvert(false);
             lamp.setStatus(1);
             lamp.setInternalGroupId(frontLamps.getId());
             Lamp.DBHelper.apply(lamp);
@@ -110,7 +110,7 @@ public class SQLConnection {
             /*lamp = new Lamp();
             lamp.setName("Test Lamp");
             lamp.setIpAddress("192.168.1.22");
-            lamp.setInvert(true);
+            lamp.setInvert(false);
             lamp.setStatus(1);
             lamp.setInternalGroupId(testLamps.getId());
             Lamp.DBHelper.apply(lamp);*/
@@ -122,7 +122,7 @@ public class SQLConnection {
             Timer.DBHelper.apply(timer);
 
             timer = new Timer();
-            timer.setStart(Time.valueOf("19:00:00"));
+            timer.setStart(Time.valueOf("18:00:00"));
             timer.setEnd(Time.valueOf("02:00:00"));
             timer.setInternalGroupId(frontLamps.getId());
             Timer.DBHelper.apply(timer);
