@@ -1,5 +1,6 @@
 package com.android305.lights.util.schedule;
 
+import com.android305.lights.ServerHandler;
 import com.android305.lights.util.Log;
 import com.android305.lights.util.sqlite.table.Timer;
 
@@ -18,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
 
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
@@ -46,7 +46,6 @@ public class DailyTask implements Job {
                 }
             }
             scheduledTasks.clear();
-            HashMap<Integer, Boolean> timerStatuses = new HashMap<>();
             ArrayList<Integer> ids = new ArrayList<>();
             Calendar calendar = Calendar.getInstance();
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
@@ -108,8 +107,6 @@ public class DailyTask implements Job {
                                                                   .usingJobData(LampTask.TIMER_ID, t.getId())
                                                                   .build();
                             sched.scheduleJob(job, newTrigger().startNow().build());
-                            timerStatuses.put(t.getId(), true);
-                            //TODO: improve this logic
                         }
                         if (t.getRGB() == null) {
                             {
@@ -162,6 +159,7 @@ public class DailyTask implements Job {
                     }
                 }
             }
+            ServerHandler.refreshGroup(null, null);
         } catch (SQLException e) {
             Log.e(e);
         }

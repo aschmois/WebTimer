@@ -103,7 +103,7 @@ public class LampUtils {
             Lamp lamp = Lamp.DBHelper.get(id);
             if (lamp != null) {
                 groupId = lamp.getInternalGroupId();
-                lamp.connect(lamp.getStatus() != Lamp.STATUS_ON, 2);
+                lamp.connect(lamp.getStatus() != Lamp.STATUS_ON, 3);
                 JSONObject parsed = new JSONObject();
                 parsed.put("lamp", lamp.getParsed());
                 return new SessionResponse(ServerHandler.LAMP_TOGGLE_SUCCESS, false, "", parsed);

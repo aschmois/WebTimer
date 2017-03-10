@@ -304,27 +304,40 @@ public class Lamp {
                 int response;
                 if ((response = conn.getResponseCode()) != HttpURLConnection.HTTP_OK) {
                     Log.e("Lamp is throwing an HTTP error: " + response);
-                    if (tries > 0) {
-                        connect(startLamp, tries - 1);
-                        return;
-                    }
                     setStatus(Lamp.STATUS_ERROR);
                     setError("HTTP Error: " + response);
                 } else {
                     Log.d((startLamp ? "Turned on" : "Turned off") + " the lamp at " + url);
                     setStatus(startLamp ? Lamp.STATUS_ON : Lamp.STATUS_OFF);
                     setError(null);
+
+                    ConnectionResponse resp = retrieveStatus(10);
+                    if(resp.getStatus() != Lamp.STATUS_ERROR) {
+                        if (getStatus() != resp.getStatus()) {
+                            setStatus(Lamp.STATUS_ERROR);
+                            setError("Mismatch Status Error");
+                        }
+                    } else {
+                        setStatus(Lamp.STATUS_ERROR);
+                        setError("Can't Retrieve Lamp Status");
+                    }
                 }
             }
         } catch (java.net.SocketTimeoutException e) {
-            Log.w("Lamp timeout retrying... (" + tries + " tries left)", e);
-            if (tries > 0) {
+            Log.w("Lamp timeout, retrying... (" + (tries-1) + " tries left)", e);
+            if (tries > 1) {
                 connect(startLamp, tries - 1);
                 return;
             }
+            Log.e("Lamp timeout", e);
             setStatus(Lamp.STATUS_ERROR);
             setError(e.getClass() + ": " + e.getLocalizedMessage());
         } catch (IOException e) {
+            Log.w("Lamp can't be reached, retrying... (" + (tries-1) + " tries left)", e);
+            if (tries > 1) {
+                connect(startLamp, tries - 1);
+                return;
+            }
             Log.e("Can't reach lamp", e);
             setStatus(Lamp.STATUS_ERROR);
             setError(e.getClass() + ": " + e.getLocalizedMessage());
@@ -359,9 +372,6 @@ public class Lamp {
                 conn.setReadTimeout(5000);
                 int response;
                 if ((response = conn.getResponseCode()) != HttpURLConnection.HTTP_OK) {
-                    Log.e("Lamp is throwing an HTTP error: " + response);
-                    if (tries > 0)
-                        return retrieveStatus(tries - 1);
                     connectionResponse.setError("HTTP Error: " + response);
                     connectionResponse.setStatus(Lamp.STATUS_ERROR);
                 } else {
@@ -375,14 +385,18 @@ public class Lamp {
                 }
             }
         } catch (java.net.SocketTimeoutException e) {
-            Log.w("Lamp timeout retrying... (" + tries + " tries left) | " + e.getLocalizedMessage());
-            if (tries > 0)
+            Log.w("Lamp timeout, retrying... (" + (tries-1) + " tries left)", e);
+            if (tries > 1) {
                 return retrieveStatus(tries - 1);
-            else
-                Log.e(e);
+            }
+            Log.e("Lamp timeout", e);
             connectionResponse.setError(e.getClass() + ": " + e.getLocalizedMessage());
             connectionResponse.setStatus(Lamp.STATUS_ERROR);
         } catch (IOException | NumberFormatException e) {
+            Log.w("Lamp can't be reached, retrying... (" + (tries-1) + " tries left)", e);
+            if (tries > 1) {
+                return retrieveStatus(tries - 1);
+            }
             Log.e("Can't reach lamp", e);
             connectionResponse.setError(e.getClass() + ": " + e.getLocalizedMessage());
             connectionResponse.setStatus(Lamp.STATUS_ERROR);

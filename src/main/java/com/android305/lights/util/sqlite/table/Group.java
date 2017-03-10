@@ -14,9 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Group {
-    public final static String QUERY = "CREATE TABLE IF NOT EXISTS `group` " +
-            "(`ID` INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            " `NAME`     CHAR(35) UNIQUE  NOT NULL);";
+    public final static String QUERY = "CREATE TABLE IF NOT EXISTS `group` " + "(`ID` INTEGER PRIMARY KEY AUTOINCREMENT, " + " `NAME`     CHAR(35) UNIQUE  NOT NULL);";
 
     private int id;
     private String name;
@@ -75,6 +73,15 @@ public class Group {
             Log.e(e);
             Log.w("Call DBHelper.getWithLampsAndTimers(int) instead of DBHelper.get(int) to catch this error");
         }
+    }
+
+    public static Group getGroup(JSONObject parsed) {
+        Group group = new Group();
+        if (parsed.has("id"))
+            group.setId(parsed.getInt("id"));
+        if (parsed.has("name"))
+            group.setName(parsed.getString("name"));
+        return group;
     }
 
     public static class DBHelper {
@@ -157,6 +164,13 @@ public class Group {
             return null;
         }
 
+        public static void delete(Group group) throws SQLException {
+            PreparedStatement deleteStmt = c.prepareStatement("DELETE FROM `group` WHERE `ID` = ?;");
+            deleteStmt.setInt(1, group.id);
+            deleteStmt.executeUpdate();
+            deleteStmt.close();
+        }
+
         public static Group commit(Group group) throws SQLException, SQLConnection.SQLUniqueException {
             apply(group);
             Group g = get(group.name);
@@ -221,11 +235,6 @@ public class Group {
 
     @Override
     public String toString() {
-        return "Group{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", lamps=" + Arrays.toString(lamps) +
-                ", timers=" + Arrays.toString(timers) +
-                '}';
+        return "Group{" + "id=" + id + ", name='" + name + '\'' + ", lamps=" + Arrays.toString(lamps) + ", timers=" + Arrays.toString(timers) + '}';
     }
 }

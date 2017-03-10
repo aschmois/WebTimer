@@ -44,6 +44,7 @@ public class TimerScheduler {
     }
 
     public void refreshTimerNow() throws SchedulerException {
+        sched.clear();
         sched.scheduleJob(newJob(DailyTask.class).usingJobData(DailyTask.FIRST_TIME, true).build(), newTrigger().startNow().build());
     }
 

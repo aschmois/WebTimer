@@ -50,7 +50,7 @@ public class LampTask implements InterruptableJob {
                             tmp.getLamps();
                             tmp.getTimers();
                         }
-                        l.connect(startLamp, 2);
+                        l.connect(startLamp, 10);
                         if (tmp != l.getGroup()) {
                             ServerHandler.refreshGroup(null, tmp);
                             tmp = l.getGroup();

@@ -43,8 +43,8 @@ public class Server {
 
     private static final int DEFAULT_PORT = 7123;
     private static SecureRandom random = new SecureRandom();
-    public static Encryption enc;
-    private static Server server;
+    static Encryption enc;
+    static Server server;
 
     public static void main(String[] args) {
         loadArgs(args);
@@ -276,6 +276,10 @@ public class Server {
             timer.stop();
         }
         Log.i("Server stopped");
+    }
+
+    public TimerScheduler getTimer() {
+        return timer;
     }
 
     private boolean isStopped() {

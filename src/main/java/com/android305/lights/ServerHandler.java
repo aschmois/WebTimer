@@ -13,6 +13,7 @@ import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
 import org.jasypt.exceptions.EncryptionOperationNotPossibleException;
 import org.json.JSONObject;
+import org.quartz.SchedulerException;
 
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -21,26 +22,27 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerHandler extends IoHandlerAdapter {
-    private static HashMap<Long, IoSession> openedSessions = new HashMap<>();
+    private static ConcurrentHashMap<Long, IoSession> openedSessions = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public synchronized static void refreshGroup(Long exclude, Group group) {
         JSONObject groupParsed = new JSONObject();
-        groupParsed.put("group", group.getParsed());
+        if (group == null) {
+            groupParsed.put("group", (Object) null);
+        } else {
+            groupParsed.put("group", group.getParsed());
+        }
         SessionResponse response = new SessionResponse(GROUP_REFRESH, false, "", groupParsed);
-        //TODO: Maybe not the greatest idea to clone this hashmap, but I don't know how else to do it. it.remove() will remove sessions from my map
-        Iterator it = ((HashMap) openedSessions.clone()).entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<Long, IoSession> pair = (Map.Entry) it.next();
-            if (exclude == null || !pair.getKey().equals(exclude)) {
-                writeJSON(pair.getValue(), -1, response);
+
+        for (Map.Entry<Long, IoSession> entry : openedSessions.entrySet()) {
+            if (exclude == null || !entry.getKey().equals(exclude)) {
+                writeJSON(entry.getValue(), -1, response);
             }
-            it.remove(); // avoids a ConcurrentModificationException
         }
     }
 
@@ -51,8 +53,7 @@ public class ServerHandler extends IoHandlerAdapter {
     public final static int ERROR_NOT_AUTHENTICATED = 1002;
 
     /* Group */
-    public final static int GROUP_ERROR_USAGE = 2000;
-    public final static int GROUP_SQL_ERROR = 2001;
+    public final static int GROUP_SQL_ERROR = 2000;
     public final static int GROUP_REFRESH = 2002;
 
     public final static int GROUP_ADD_SUCCESS = 2100;
@@ -63,6 +64,10 @@ public class ServerHandler extends IoHandlerAdapter {
 
     public final static int GROUP_GET_ALL_SUCCESS = 2300;
     public final static int GROUP_GET_ALL_DOES_NOT_EXIST = 2301;
+
+    public final static int GROUP_EDIT_SUCCESS = 2400;
+
+    public final static int GROUP_DELETE_SUCCESS = 2500;
 
     /* Lamp */
     public final static int LAMP_SQL_ERROR = 3000;
@@ -208,7 +213,8 @@ public class ServerHandler extends IoHandlerAdapter {
                     writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,edit,delete"));
                     break;
             }
-        } catch (SQLException e) {
+            Server.server.getTimer().refreshTimerNow();
+        } catch (SQLException | SchedulerException e) {
             Log.e(e);
             writeJSON(session, actionId, new SessionResponse(TIMER_SQL_ERROR, true, e.getMessage()));
         }
@@ -218,19 +224,19 @@ public class ServerHandler extends IoHandlerAdapter {
         try {
             switch (args.getString("secondary_action")) {
                 case "add":
-                    //TODO: Add group
+                    writeJSON(session, actionId, GroupUtils.addGroup(session.getId(), args));
                     break;
                 case "get":
-                    //TODO: Get group
+                    writeJSON(session, actionId, GroupUtils.getGroup(args));
                     break;
                 case "get-all":
                     writeJSON(session, actionId, GroupUtils.getGroups());
                     break;
-                case "update":
-                    //TODO: Update group
+                case "edit":
+                    writeJSON(session, actionId, GroupUtils.editGroup(session.getId(), args));
                     break;
                 case "delete":
-                    //TODO: Delete group
+                    writeJSON(session, actionId, GroupUtils.deleteGroup(session.getId(), args));
                     break;
                 default:
                     writeJSON(session, actionId, new SessionResponse(ERROR_UNKNOWN, true, "set secondary_action to: add,get,get-all,update,delete"));
@@ -238,7 +244,7 @@ public class ServerHandler extends IoHandlerAdapter {
             }
         } catch (SQLException e) {
             Log.e(e);
-            writeJSON(session, actionId, new SessionResponse(LAMP_SQL_ERROR, true, e.getMessage()));
+            writeJSON(session, actionId, new SessionResponse(GROUP_SQL_ERROR, true, e.getMessage()));
         }
     }
 
