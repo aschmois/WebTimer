@@ -376,7 +376,7 @@ public class Lamp {
                     connectionResponse.setStatus(Lamp.STATUS_ERROR);
                 } else {
                     is = conn.getInputStream();
-                    String resp = IOUtils.toString(is, Charset.forName("UTF-8")).split("\n")[2].replace("</html>", "").trim(); //TODO: Update arduino code to remove html code
+                    String resp = IOUtils.toString(is, Charset.forName("UTF-8"));
                     Log.v(resp);
                     int status = Integer.parseInt(resp);
                     Log.d("The lamp at " + ipAddress + " is `" + ((status == 1 && !invert) || (status == 0 && invert) ? "On" : "Off") + "`");
