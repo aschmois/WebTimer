@@ -46,6 +46,11 @@ public class DailyTask implements Job {
                 }
             }
             scheduledTasks.clear();
+            for (Timer t : Timer.DBHelper.getAll()) {
+                //clear status of all timers
+                t.setStatus(0);
+                Timer.DBHelper.update(t);
+            }
             ArrayList<Integer> ids = new ArrayList<>();
             Calendar calendar = Calendar.getInstance();
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
@@ -94,22 +99,23 @@ public class DailyTask implements Job {
                         Date start = getDate(t.getStart());
                         Date end = getDate(t.getEnd());
                         boolean status;
-                        if (start.getTime() - end.getTime() > 0) {
+                        if (end.before(start)) {
                             status = now.after(start);
                         } else {
                             status = now.after(start) && now.before(end);
                         }
                         t.setStatus(status ? 1 : 0);
                         Timer.DBHelper.update(t);
-                        if (firstTime && status) {
+                        if (firstTime) {
+                            Log.v("Group `" + t.getInternalGroupId() + "` needs to be : " + (status ? "on" : "off"));
                             JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
-                                                                  .usingJobData(LampTask.START_LAMP, true)
+                                                                  .usingJobData(LampTask.START_LAMP, status)
                                                                   .usingJobData(LampTask.TIMER_ID, t.getId())
                                                                   .build();
                             sched.scheduleJob(job, newTrigger().startNow().build());
                         }
                         if (t.getRGB() == null) {
-                            {
+                            if (now.before(start)) {
                                 JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
                                                                       .usingJobData(LampTask.START_LAMP, true)
                                                                       .usingJobData(LampTask.TIMER_ID, t.getId())
@@ -119,7 +125,7 @@ public class DailyTask implements Job {
                                 scheduledTasks.add(job.getKey());
                                 Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn on at: " + start.toString());
                             }
-                            {
+                            if (now.before(end)) {
                                 JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
                                                                       .usingJobData(LampTask.START_LAMP, false)
                                                                       .usingJobData(LampTask.TIMER_ID, t.getId())
@@ -140,7 +146,10 @@ public class DailyTask implements Job {
                         if (ids.contains(t.getId())) {
                             Date start = getDate(t.getStart());
                             Date end = getDate(t.getEnd());
-                            if (start.getTime() - end.getTime() > 0) {
+                            if (end.before(start) && now.before(end)) {
+                                boolean status = now.after(start);
+                                t.setStatus(status ? 1 : 0);
+                                Timer.DBHelper.update(t);
                                 if (t.getRGB() == null) {
                                     JobDetail job = newJob(LampTask.class).usingJobData(LampTask.GROUP_ID, t.getInternalGroupId())
                                                                           .usingJobData(LampTask.START_LAMP, false)
@@ -149,7 +158,7 @@ public class DailyTask implements Job {
                                     Trigger trigger = newTrigger().startAt(end).withSchedule(simpleSchedule().withMisfireHandlingInstructionNextWithRemainingCount()).build();
                                     sched.scheduleJob(job, trigger);
                                     scheduledTasks.add(job.getKey());
-                                    Log.v("Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
+                                    Log.v("Day Before: Scheduled Lamp Task for group `" + t.getInternalGroupId() + "` to turn off at: " + end.toString());
                                 }
                             }
                             //TODO: RGB Lamps
