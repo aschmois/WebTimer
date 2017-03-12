@@ -255,12 +255,12 @@ public class Server {
         Log.i("Starting server...");
         acceptor = new NioSocketAcceptor();
         TextLineCodecFactory factory = new TextLineCodecFactory(Charset.forName("UTF-8"));
-        factory.setEncoderMaxLineLength(8192);
-        factory.setDecoderMaxLineLength(8192);
+        factory.setEncoderMaxLineLength(Integer.MAX_VALUE);
+        factory.setDecoderMaxLineLength(Integer.MAX_VALUE);
         acceptor.getFilterChain().addLast("codec", new ProtocolCodecFilter(factory));
         ServerHandler handler = new ServerHandler(password);
         acceptor.setHandler(handler);
-        acceptor.getSessionConfig().setReadBufferSize(8192);
+        //acceptor.getSessionConfig().setReadBufferSize(8192);
         acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 1);
         acceptor.bind(new InetSocketAddress(port));
         Log.i("Server started.");
