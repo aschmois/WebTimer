@@ -69,6 +69,18 @@ public class Timer {
         this.end = end;
     }
 
+    public boolean isEveryday() {
+        return sunday && monday && tuesday && wednesday && thursday && friday && saturday;
+    }
+
+    public boolean isWeekend() {
+        return sunday && !monday && !tuesday && !wednesday && !thursday && !friday && saturday;
+    }
+
+    public boolean isWeekdays() {
+        return !sunday && monday && tuesday && wednesday && thursday && friday && !saturday;
+    }
+
     public boolean isSunday() {
         return sunday;
     }

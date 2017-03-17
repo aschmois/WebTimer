@@ -23,10 +23,9 @@ public class TimerScheduler {
 
     public TimerScheduler() {
         try {
-            LocalTime midnight = LocalTime.MIDNIGHT;
             ZoneId z = ZoneId.systemDefault();
             LocalDate today = LocalDate.now(z);
-            LocalDateTime tomorrowMidnight = LocalDateTime.of(today, midnight).plusDays(1);
+            LocalDateTime tomorrowMidnight = LocalDateTime.of(today, LocalTime.MIDNIGHT).plusDays(1);
             sched = new StdSchedulerFactory().getScheduler();
             sched.start();
             JobDetail job = newJob(DailyTask.class).withIdentity("dailyTask").usingJobData(DailyTask.FIRST_TIME, false).build();
