@@ -168,28 +168,30 @@ public class DailyTask implements Job {
                             Log.e(e);
                         }
                     }
-                    for (Timer t : dayBefore) {
-                        try {
-                            if (ids.contains(t.getId())) {
-                                Date start = getToday(t.getStart());
-                                Date end = getToday(t.getEnd());
-                                if (end.before(start) && (now.before(end) || (isMidnight(end) && isMidnight(now)))) {
-                                    boolean status = now.after(start);
-                                    t.setStatus(status ? 1 : 0);
-                                    Timer.DBHelper.update(t);
-                                    if (t.getRGB() == null) {
-                                        if (!isMidnight(end)) {
-                                            schedule(t, false, end, true);
-                                        } else if (isMidnight(now)) {
-                                            Log.v("Group `" + t.getInternalGroupId() + "` turns off at midnight, so let's do that now.");
-                                            sched.scheduleJob(createLampJob(t, false), newTrigger().startNow().build());
+                    if (dayBefore != null) {
+                        for (Timer t : dayBefore) {
+                            try {
+                                if (ids.contains(t.getId())) {
+                                    Date start = getToday(t.getStart());
+                                    Date end = getToday(t.getEnd());
+                                    if (end.before(start) && (now.before(end) || (isMidnight(end) && isMidnight(now)))) {
+                                        boolean status = now.after(start);
+                                        t.setStatus(status ? 1 : 0);
+                                        Timer.DBHelper.update(t);
+                                        if (t.getRGB() == null) {
+                                            if (!isMidnight(end)) {
+                                                schedule(t, false, end, true);
+                                            } else if (isMidnight(now)) {
+                                                Log.v("Group `" + t.getInternalGroupId() + "` turns off at midnight, so let's do that now.");
+                                                sched.scheduleJob(createLampJob(t, false), newTrigger().startNow().build());
+                                            }
                                         }
                                     }
+                                    //TODO: RGB Lamps
                                 }
-                                //TODO: RGB Lamps
+                            } catch (SchedulerException e) {
+                                Log.e(e);
                             }
-                        } catch (SchedulerException e) {
-                            Log.e(e);
                         }
                     }
 
