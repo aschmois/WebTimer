@@ -8,3 +8,10 @@ logs/*
 working_dir/*
 gradle.properties
 out/
+
+**/__Previews/**
+**/Gerber/**
+**/History/**
+**/Project Logs*/**
+**/Project Outputs*/**
+altium/Wifi Relay/IDFReport_PCB1.html
